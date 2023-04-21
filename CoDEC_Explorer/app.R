@@ -18,15 +18,14 @@ library(tmap)
     left_join(cincy::tract_tigris_2010, by = 'census_tract_id_2010') |> 
     sf::st_as_sf()
   
-  var_names <- d |> 
-    purrr::map(attr, "title") |> 
-    as.character() 
-    #replace null w/ na or ugly name
-  
-  #attr(d[[26]], "title")
-  #attr_g
-  
-  #var_names <- glimpse_schema(d)
+  d <- d |> 
+    select(!where(is.logical))
+
+  var_meta <- glimpse_schema(d) |> 
+    relocate(title, .before = name) |> 
+    rowwise() |> 
+    mutate(title = coalesce(title, name)) |> 
+    ungroup()
   
   codec_bi_pal <- c(
     "1-1" = "#eddcc1",
@@ -129,17 +128,17 @@ ui <- page_navbar(
   
   sidebar = sidebar(shinyWidgets::pickerInput('x',
                                               label = "X Variable",
-                                              choices = names(d),#var_names,
+                                              choices = var_meta$title,
                                               multiple = FALSE,
-                                              selected = 'ice',
+                                              selected = 'Racial Economic Index of Concentration at the Extremes',
                                               options = pickerOptions(
                                                 liveSearch = TRUE
                                               )),
                     shinyWidgets::pickerInput('y',
                                               label = "Y Variable", 
-                                              choices = names(d),#var_names,
+                                              choices = var_meta$title,
                                               multiple = FALSE,
-                                              selected = 'dep_index',
+                                              selected = 'Material Deprivation Index',
                                               options = pickerOptions(
                                                 liveSearch = TRUE
                                               )),
@@ -159,13 +158,29 @@ ui <- page_navbar(
 
 server <- function(input, output, session) {
   
-  xvar <- reactive({input$x})
-  yvar <- reactive({input$y})
+  xvar <- reactive({
+    
+    xvar <- var_meta |> 
+      filter(title == input$x) |> 
+      pull(name)
+    
+    xvar
+    
+    })
+  yvar <- reactive({
+    
+    yvar <- var_meta |> 
+      filter(title == input$y) |> 
+      pull(name)
+    
+    yvar
+    
+    })
   
   output$map <- renderLeaflet({
     
-    bins_x <- pull(d, input$x)
-    bins_y <- pull(d, input$y)
+    bins_x <- pull(d, xvar())
+    bins_y <- pull(d, yvar())
     
     bins_x <- classInt::classIntervals(bins_x, n = 3, style = "quantile")
     bins_y <- classInt::classIntervals(bins_y, n = 3, style = "quantile")
@@ -175,9 +190,9 @@ server <- function(input, output, session) {
     
     # cut into groups defined above
     out <- d |> 
-      mutate(bi_x = cut(get(input$x), breaks = bins_x, include.lowest = TRUE))
+      mutate(bi_x = cut(get(xvar()), breaks = bins_x, include.lowest = TRUE))
     out <- out |> 
-      mutate(bi_y = cut(get(input$y), breaks = bins_y, include.lowest = TRUE))
+      mutate(bi_y = cut(get(yvar()), breaks = bins_y, include.lowest = TRUE))
     out <- out|> 
       mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
     
@@ -185,7 +200,7 @@ server <- function(input, output, session) {
     map <- 
       tm_basemap("CartoDB.Positron") +
       tm_shape(out, unit = 'miles') +
-      tm_polygons(col ="bi_class", alpha = 0.7, palette = codec_colors, legend.show = FALSE)
+      tm_polygons(col ="bi_class", alpha = 0.7, palette = codec_bi_pal, legend.show = FALSE)
     
     map |> 
       tmap_leaflet(in.shiny = TRUE) |> 
@@ -207,13 +222,13 @@ server <- function(input, output, session) {
       labs(x = paste0(input$x), y = paste0(input$y))
     
     hist1 <- ggplot(d) +
-      geom_histogram_interactive(aes_string(x = input$x, tooltip = "census_tract_id_2010", 
+      geom_histogram_interactive(aes_string(x = xvar(), tooltip = "census_tract_id_2010", 
                                             data_id = "census_tract_id_2010"), 
                                  fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
       theme_minimal()
     
     hist2 <- ggplot(d) +
-      geom_histogram_interactive(aes_string(x = input$y, tooltip = "census_tract_id_2010", 
+      geom_histogram_interactive(aes_string(x = yvar(), tooltip = "census_tract_id_2010", 
                                             data_id = "census_tract_id_2010"), 
                                  fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
       coord_flip() + 
@@ -265,16 +280,16 @@ server <- function(input, output, session) {
         theme(aspect.ratio = 1, title = element_text(size = 8),
               axis.title = element_text(size = 6),
               legend.key.size = unit(3,"mm")) +
-        labs(x = paste0(input$x), y = paste0(input$y))
+        labs(x = paste0(xvar()), y = paste0(yvar()))
       
       hist1 <- ggplot(d) +
-        geom_histogram_interactive(aes_string(x = input$x, tooltip = "census_tract_id_2010",
+        geom_histogram_interactive(aes_string(x = xvar(), tooltip = "census_tract_id_2010",
                                               data_id = "census_tract_id_2010"),
                                    fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
         theme_minimal()
       
       hist2 <- ggplot(d) +
-        geom_histogram_interactive(aes_string(x = input$y, tooltip = "census_tract_id_2010",
+        geom_histogram_interactive(aes_string(x = yvar(), tooltip = "census_tract_id_2010",
                                               data_id = "census_tract_id_2010"),
                                    fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
         coord_flip() +
@@ -300,9 +315,9 @@ server <- function(input, output, session) {
     
     legend <- bi_legend(pal = codec_bi_pal,
                         dim = 3,
-                        xlab = paste0("Higher ", input$x),
-                        ylab = paste0("Higher ", input$y),
-                        size = 10)
+                        xlab = paste0("Greater X Variable"),
+                        ylab = paste0("Greater Y Variable"),
+                        size = 8)
     
     legend
   })
