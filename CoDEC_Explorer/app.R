@@ -200,11 +200,12 @@ server <- function(input, output, session) {
     map <- 
       tm_basemap("CartoDB.Positron") +
       tm_shape(out, unit = 'miles') +
-      tm_polygons(col ="bi_class", alpha = 0.7, palette = codec_bi_pal, legend.show = FALSE)
+      tm_polygons(col ="bi_class", alpha = 0.7, palette = codec_bi_pal, legend.show = FALSE,
+                  popup.vars = c(xvar(), yvar()))
     
     map |> 
       tmap_leaflet(in.shiny = TRUE) |> 
-      removeLayersControl()
+      removeLayersControl() 
   })
   
  
@@ -280,7 +281,7 @@ server <- function(input, output, session) {
         theme(aspect.ratio = 1, title = element_text(size = 8),
               axis.title = element_text(size = 6),
               legend.key.size = unit(3,"mm")) +
-        labs(x = paste0(xvar()), y = paste0(yvar()))
+        labs(x = paste0(input$x), y = paste0(input$y))
       
       hist1 <- ggplot(d) +
         geom_histogram_interactive(aes_string(x = xvar(), tooltip = "census_tract_id_2010",
