@@ -142,6 +142,10 @@ ui <- page_navbar(
                                               options = pickerOptions(
                                                 liveSearch = TRUE
                                               )),
+                    hr(),
+                    htmlOutput('x_desc'),
+                    hr(),
+                    htmlOutput('y_desc'),
                     width = '15%'
   ), # sidebar(sidebar_acc,
             #        width = '15%'),
@@ -321,6 +325,14 @@ server <- function(input, output, session) {
                         size = 8)
     
     legend
+  })
+  
+  output$x_desc <- renderText({
+    paste0(strong(input$x), ": ", var_meta |> filter(title == input$x) |> pull(description))
+  })
+  
+  output$y_desc <- renderText({
+    paste0(strong(input$y), ": ", var_meta |> filter(title == input$y) |> pull(description))
   })
   
   output$table <- DT::renderDataTable({
