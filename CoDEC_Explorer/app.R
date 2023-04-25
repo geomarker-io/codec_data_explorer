@@ -14,46 +14,48 @@ library(tmap)
 {
   tmap_mode("view")
   
-  d_drive <- codec_data("hamilton_drivetime") |> 
-    select(-year) |> 
-    mutate(source = "drive")
+  source('dataset_prep.R')
   
-  d_land <- codec_data("hamilton_landcover") |> 
-    select(-year) 
-  
-  d_traffic <- codec_data("hamilton_traffic") |> 
-    select(-year) 
-  
-  d_acs <- codec_data("hh_acs_measures") |> 
-    filter(year == max(year)) 
-  
-  d_indices <- codec_data("tract_indices") 
-  
-  d_property <- codec_data("hamilton_property_code_enforcement") |> 
-    select(-year) 
-  
-  
-  d_all <- left_join(d_drive, d_land) |> 
-    left_join(d_traffic) |> 
-    left_join(d_acs) |> 
-    left_join(d_indices) |> 
-    left_join(d_property, by = c("census_tract_id_2010" = "census_tract_id_2020")) |> 
-    select(!where(is.logical)) 
-  
-  # d_all <- d_all |> 
-  #   rowwise() |> 
-  #   mutate(source = case_when()) |> 
-  #   ungroup()
+  # d_drive <- codec_data("hamilton_drivetime") |> 
+  #   select(-year) |> 
+  #   mutate(source = "drive")
   # 
-  d <- d_indices |> 
-    left_join(cincy::tract_tigris_2010, by = 'census_tract_id_2010') |> 
-    sf::st_as_sf()
-  
-  var_meta <- glimpse_schema(d) |> 
-    relocate(title, .before = name) |> 
-    rowwise() |> 
-    mutate(title = coalesce(title, name)) |> 
-    ungroup()
+  # d_land <- codec_data("hamilton_landcover") |> 
+  #   select(-year) 
+  # 
+  # d_traffic <- codec_data("hamilton_traffic") |> 
+  #   select(-year) 
+  # 
+  # d_acs <- codec_data("hh_acs_measures") |> 
+  #   filter(year == max(year)) 
+  # 
+  # d_indices <- codec_data("tract_indices") 
+  # 
+  # d_property <- codec_data("hamilton_property_code_enforcement") |> 
+  #   select(-year) 
+  # 
+  # 
+  # d_all <- left_join(d_drive, d_land) |> 
+  #   left_join(d_traffic) |> 
+  #   left_join(d_acs) |> 
+  #   left_join(d_indices) |> 
+  #   left_join(d_property, by = c("census_tract_id_2010" = "census_tract_id_2020")) |> 
+  #   select(!where(is.logical)) 
+  # 
+  # # d_all <- d_all |> 
+  # #   rowwise() |> 
+  # #   mutate(source = case_when()) |> 
+  # #   ungroup()
+  # # 
+  # d <- d_indices |> 
+  #   left_join(cincy::tract_tigris_2010, by = 'census_tract_id_2010') |> 
+  #   sf::st_as_sf()
+  # 
+  # var_meta <- glimpse_schema(d) |> 
+  #   relocate(title, .before = name) |> 
+  #   rowwise() |> 
+  #   mutate(title = coalesce(title, name)) |> 
+  #   ungroup()
   
   
   codec_bi_pal <- c(
@@ -156,31 +158,17 @@ ui <- page_navbar(
   fillable = TRUE,
   
   sidebar = sidebar(
-    # shinyWidgets::prettyCheckboxGroup(inputId = "source",
-    #                                                   label = "Select the CoDEC cores you would like to include:",
-    #                                                   choices = unique(d_all$source))
-    # 
-    shinyWidgets::pickerInput('x',
-                                              label = "X Variable",
-                                              choices = var_meta$title,
-                                              multiple = FALSE,
-                                              selected = 'Racial Economic Index of Concentration at the Extremes',
-                                              options = pickerOptions(
-                                                liveSearch = TRUE
-                                              )),
-                    shinyWidgets::pickerInput('y',
-                                              label = "Y Variable", 
-                                              choices = var_meta$title,
-                                              multiple = FALSE,
-                                              selected = 'Material Deprivation Index',
-                                              options = pickerOptions(
-                                                liveSearch = TRUE
-                                              )),
-                    hr(),
-                    htmlOutput('x_desc'),
-                    hr(),
-                    htmlOutput('y_desc'),
-                    width = '15%'
+     shinyWidgets::prettyCheckboxGroup(inputId = "core",
+                                       label = "Select the CoDEC cores you would like to include:",
+                                       choices = core_names$title,
+                                       selected = "Census Tract-Level Neighborhood Indices"),
+     uiOutput("x_sel"),
+     uiOutput("y_sel"),
+     hr(),
+     htmlOutput('x_desc'),
+     hr(),
+     htmlOutput('y_desc'),
+     width = '18%'
   ), # sidebar(sidebar_acc,
             #        width = '15%'),
   
@@ -196,18 +184,60 @@ ui <- page_navbar(
 
 server <- function(input, output, session) {
   
+  d_sel_cores <- reactive({
+    core_names |> 
+      filter(title %in% input$core)
+  })
+  
+  d_sel_metrics <- reactive({
+    d_names |> 
+      filter(core %in% d_sel_cores()$name)
+  })
+  
+  d <- reactive({
+    d_all #|> 
+      #select(matches(d_sel_cores()$name))
+  })
+  
+  output$x_sel <- renderUI({
+    shinyWidgets::pickerInput(inputId = 'x',
+                              label = "X Variable",
+                              choices = d_sel_metrics()$title,
+                              multiple = FALSE,
+                              selected = 'Racial Economic Index of Concentration at the Extremes',
+                              options = pickerOptions(
+                                liveSearch = TRUE
+                              ))
+  })
+  
+  output$y_sel <- renderUI({
+    shinyWidgets::pickerInput(inputId = 'y',
+                              label = "Y Variable", 
+                              choices = d_sel_metrics()$title,
+                              multiple = FALSE,
+                              selected = 'Material Deprivation Index',
+                              options = pickerOptions(
+                                liveSearch = TRUE
+                              ))
+  })
+  
+  
+  
   xvar <- reactive({
+    req(input$x)
     
-    xvar <- var_meta |> 
+    xvar <- d_names |> 
       filter(title == input$x) |> 
       pull(name)
     
     xvar
     
     })
+  
   yvar <- reactive({
+    req(input$y)
     
-    yvar <- var_meta |> 
+    yvar <- d_names |> 
       filter(title == input$y) |> 
       pull(name)
     
@@ -216,9 +246,10 @@ server <- function(input, output, session) {
     })
   
   output$map <- renderLeaflet({
+    req(input$x)
     
-    bins_x <- pull(d, xvar())
-    bins_y <- pull(d, yvar())
+    bins_x <- pull(d(), xvar())
+    bins_y <- pull(d(), yvar())
     
     bins_x <- classInt::classIntervals(bins_x, n = 3, style = "quantile")
     bins_y <- classInt::classIntervals(bins_y, n = 3, style = "quantile")
@@ -227,7 +258,7 @@ server <- function(input, output, session) {
     bins_y <- bins_y$brks
     
     # cut into groups defined above
-    out <- d |> 
+    out <- d() |> 
       mutate(bi_x = cut(get(xvar()), breaks = bins_x, include.lowest = TRUE))
     out <- out |> 
       mutate(bi_y = cut(get(yvar()), breaks = bins_y, include.lowest = TRUE))
@@ -249,8 +280,9 @@ server <- function(input, output, session) {
  
   
   output$scatter <- renderGirafe({
+    req(input$x)
     
-    scat <- ggplot(d) +
+    scat <- ggplot(d()) +
       geom_point_interactive(aes_string(x = xvar(), y = yvar(),
                                         data_id = "census_tract_id_2010"), 
                              color = codec_colors()[7]) +
@@ -260,13 +292,13 @@ server <- function(input, output, session) {
             legend.key.size = unit(3,"mm")) +
       labs(x = paste0(input$x), y = paste0(input$y))
     
-    hist1 <- ggplot(d) +
+    hist1 <- ggplot(d()) +
       geom_histogram_interactive(aes_string(x = xvar(), tooltip = "census_tract_id_2010", 
                                             data_id = "census_tract_id_2010"), 
                                  fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
       theme_minimal()
     
-    hist2 <- ggplot(d) +
+    hist2 <- ggplot(d()) +
       geom_histogram_interactive(aes_string(x = yvar(), tooltip = "census_tract_id_2010", 
                                             data_id = "census_tract_id_2010"), 
                                  fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
@@ -299,12 +331,12 @@ server <- function(input, output, session) {
                     tract_id = str_sub(map_click$id, 2))
     #print(click)
     
-    d_selected <- d |> 
+    d_selected <- d() |> 
       filter(census_tract_id_2010 == click$tract_id)
     
     output$scatter <- renderGirafe({
       scat <- ggplot() +
-        geom_point_interactive(data = d, aes_string(x = xvar(), y = yvar(),
+        geom_point_interactive(data = d(), aes_string(x = xvar(), y = yvar(),
                                           data_id = "census_tract_id_2010"),
                                color = codec_colors()[7]) +
         geom_point_interactive(data = d_selected,
@@ -321,13 +353,13 @@ server <- function(input, output, session) {
               legend.key.size = unit(3,"mm")) +
         labs(x = paste0(input$x), y = paste0(input$y))
       
-      hist1 <- ggplot(d) +
+      hist1 <- ggplot(d()) +
         geom_histogram_interactive(aes_string(x = xvar(), tooltip = "census_tract_id_2010",
                                               data_id = "census_tract_id_2010"),
                                    fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
         theme_minimal()
       
-      hist2 <- ggplot(d) +
+      hist2 <- ggplot(d()) +
         geom_histogram_interactive(aes_string(x = yvar(), tooltip = "census_tract_id_2010",
                                               data_id = "census_tract_id_2010"),
                                    fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
@@ -362,10 +394,14 @@ server <- function(input, output, session) {
   })
   
   output$x_desc <- renderText({
+    req(input$x)
+    
     paste0(strong(input$x), ": ", var_meta |> filter(title == input$x) |> pull(description))
   })
   
   output$y_desc <- renderText({
+    req(input$y)
+    
     paste0(strong(input$y), ": ", var_meta |> filter(title == input$y) |> pull(description))
   })
   
