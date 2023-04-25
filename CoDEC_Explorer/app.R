@@ -14,18 +14,47 @@ library(tmap)
 {
   tmap_mode("view")
   
-  d <- codec_data("tract_indices") |> 
+  d_drive <- codec_data("hamilton_drivetime") |> 
+    select(-year) |> 
+    mutate(source = "drive")
+  
+  d_land <- codec_data("hamilton_landcover") |> 
+    select(-year) 
+  
+  d_traffic <- codec_data("hamilton_traffic") |> 
+    select(-year) 
+  
+  d_acs <- codec_data("hh_acs_measures") |> 
+    filter(year == max(year)) 
+  
+  d_indices <- codec_data("tract_indices") 
+  
+  d_property <- codec_data("hamilton_property_code_enforcement") |> 
+    select(-year) 
+  
+  
+  d_all <- left_join(d_drive, d_land) |> 
+    left_join(d_traffic) |> 
+    left_join(d_acs) |> 
+    left_join(d_indices) |> 
+    left_join(d_property, by = c("census_tract_id_2010" = "census_tract_id_2020")) |> 
+    select(!where(is.logical)) 
+  
+  # d_all <- d_all |> 
+  #   rowwise() |> 
+  #   mutate(source = case_when()) |> 
+  #   ungroup()
+  # 
+  d <- d_indices |> 
     left_join(cincy::tract_tigris_2010, by = 'census_tract_id_2010') |> 
     sf::st_as_sf()
   
-  d <- d |> 
-    select(!where(is.logical))
-
   var_meta <- glimpse_schema(d) |> 
     relocate(title, .before = name) |> 
     rowwise() |> 
     mutate(title = coalesce(title, name)) |> 
     ungroup()
+  
   
   codec_bi_pal <- c(
     "1-1" = "#eddcc1",
@@ -126,7 +155,12 @@ ui <- page_navbar(
   
   fillable = TRUE,
   
-  sidebar = sidebar(shinyWidgets::pickerInput('x',
+  sidebar = sidebar(
+    # shinyWidgets::prettyCheckboxGroup(inputId = "source",
+    #                                                   label = "Select the CoDEC cores you would like to include:",
+    #                                                   choices = unique(d_all$source))
+    # 
+    shinyWidgets::pickerInput('x',
                                               label = "X Variable",
                                               choices = var_meta$title,
                                               multiple = FALSE,
