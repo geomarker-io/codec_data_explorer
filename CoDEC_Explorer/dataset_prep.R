@@ -76,6 +76,12 @@ d_property_names <- d_property |>
 d_names <- rbind(d_drive_names, d_land_names, d_traffic_names, d_acs_names, d_indices_names, d_property_names) |> 
   distinct()
 
+d_names <- d_names |> 
+  relocate(title, .before = name) |> 
+  rowwise() |> 
+  mutate(title = coalesce(title, name)) |> 
+  ungroup()
+
 core_meta <- rbind(
   glimpse_tdr(d_drive)$attributes,
   glimpse_tdr(d_land)$attributes,
