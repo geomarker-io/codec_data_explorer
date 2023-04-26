@@ -4660,6 +4660,39 @@
         "Built": "R 4.2.0; ; 2022-07-19 12:33:31 UTC; unix"
       }
     },
+    "tigris": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com/",
+      "GithubRepo": null,
+      "GithubUsername": null,
+      "GithubRef": null,
+      "GithubSha1": null,
+      "description": {
+        "Package": "tigris",
+        "Type": "Package",
+        "Title": "Load Census TIGER/Line Shapefiles",
+        "Version": "2.0",
+        "Date": "2022-12-06",
+        "Authors@R": "c(\n      person(given=\"Kyle\", family=\"Walker\", email=\"kyle@walker-data.com\", role=c(\"aut\", \"cre\")),\n      person(given=\"Bob\", family=\"Rudis\", email=\"bob@rudis.net\", role=\"ctb\")\n    )",
+        "URL": "https://github.com/walkerke/tigris",
+        "BugReports": "https://github.com/walkerke/tigris/issues",
+        "Description": "Download TIGER/Line shapefiles from the United States Census Bureau \n    (<https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html>) \n    and load into R as 'sf' objects.",
+        "License": "MIT + file LICENSE",
+        "LazyData": "TRUE",
+        "Encoding": "UTF-8",
+        "Depends": "R (>= 3.3.0)",
+        "Suggests": "testthat, ggplot2, ggthemes, leaflet, knitr, tidycensus, sp",
+        "Imports": "stringr, magrittr, utils, rappdirs, httr, uuid, sf, dplyr,\nmethods",
+        "RoxygenNote": "7.2.2",
+        "NeedsCompilation": "no",
+        "Packaged": "2022-12-07 14:21:21 UTC; kyle",
+        "Author": "Kyle Walker [aut, cre],\n  Bob Rudis [ctb]",
+        "Maintainer": "Kyle Walker <kyle@walker-data.com>",
+        "Repository": "CRAN",
+        "Date/Publication": "2022-12-07 15:10:02 UTC",
+        "Built": "R 4.2.0; ; 2022-12-08 13:02:12 UTC; unix"
+      }
+    },
     "timechange": {
       "Source": "CRAN",
       "Repository": "https://cran.rstudio.com/",
@@ -5282,13 +5315,13 @@
       "checksum": "fceb8ffa5dc0342e692ec99eed058996"
     },
     "app.R": {
-      "checksum": "5141a622b14c1d6006dddcc61b809b7a"
+      "checksum": "b4849709b366094c2ee64e9580da6e13"
     },
     "collect_codec_data.R": {
       "checksum": "9c92673db65e9f91cd2e186be962c9ef"
     },
     "dataset_prep.R": {
-      "checksum": "0d24d7409f858d2cc3640d1650405723"
+      "checksum": "3ad6aa520beafb209420100f37c6ec0a"
     },
     "mapping.R": {
       "checksum": "8c2204495c7c4c4d234535f7c63fb997"

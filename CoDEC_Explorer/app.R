@@ -159,7 +159,7 @@ ui <- page_navbar(
   
   sidebar = sidebar(
      shinyWidgets::prettyCheckboxGroup(inputId = "core",
-                                       label = "Select the CoDEC cores you would like to include:",
+                                       label = strong("Select the CoDEC cores you would like to include:"),
                                        choices = core_names$title,
                                        selected = "Census Tract-Level Neighborhood Indices"),
      uiOutput("x_sel"),
