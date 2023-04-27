@@ -55,20 +55,20 @@ ex_card <- card(
                          box-shadow: 0pt 0pt 6pt 0px rgba(61,59,61,0.48);",
                 fixedRow(girafeOutput("scatter", height = "350px", width = "350px"))),
   
-  absolutePanel(id = "legend_panel",
-                bottom = 20,
-                left = 20,
-                height = "160px",
-                width = "160px",
-                style =
-                  "padding: 5px;
-                         border: 1px solid #000;
-                         background: #FFFFFF;
-                         opacity: .7;
-                         margin: auto;
-                         border-radius: 5pt;
-                         box-shadow: 0pt 0pt 0pt 0px rgba(61,59,61,0.48);",
-                plotOutput("legend", width = "145px", height = "145px"))
+  # absolutePanel(id = "legend_panel",
+  #               bottom = 20,
+  #               left = 20,
+  #               height = "160px",
+  #               width = "160px",
+  #               style =
+  #                 "padding: 5px;
+  #                        border: 1px solid #000;
+  #                        background: #FFFFFF;
+  #                        opacity: .7;
+  #                        margin: auto;
+  #                        border-radius: 5pt;
+  #                        box-shadow: 0pt 0pt 0pt 0px rgba(61,59,61,0.48);",
+  #               plotOutput("legend", width = "145px", height = "145px"))
 )
 
 data_card <- card(
@@ -100,10 +100,12 @@ ui <- page_navbar(
      uiOutput("x_sel"),
      uiOutput("y_sel"),
      hr(),
+     plotOutput("legend"),
+     hr(),
      htmlOutput('x_desc'),
      hr(),
      htmlOutput('y_desc'),
-     width = '18%'
+     width = '20%'
   ), 
   
   nav("Showcase",
@@ -213,14 +215,6 @@ server <- function(input, output, session) {
       removeLayersControl()
     
     map  
-    #   tm_basemap("CartoDB.Positron") +
-    #   tm_shape(out, unit = 'miles') +
-    #   tm_polygons(col ="bi_class", alpha = 0.7, palette = codec_bi_pal, legend.show = FALSE,
-    #               popup.vars = c(xvar(), yvar()))
-    # 
-    # map |> 
-    #   tmap_leaflet(in.shiny = TRUE) |> 
-    #   removeLayersControl() 
   })
   
  
@@ -310,20 +304,7 @@ server <- function(input, output, session) {
         removeLayersControl()
         
       map
-      #   tm_basemap("CartoDB.Positron") +
-      #   tm_shape(out, unit = 'miles') +
-      #   tm_polygons(col ="bi_class", alpha = 0.7, palette = codec_bi_pal, legend.show = FALSE,
-      #               popup.vars = c(xvar(), yvar())) +
-      #   tm_shape(d_scat_click, unit = 'miles') +
-      #   tm_borders(col = "white", lwd = 2)
-      # 
-      # map_leaflet <- map |> 
-      #   tmap_leaflet(in.shiny = TRUE) 
-      # 
-      # leafletProxy("map") |> 
-      #   clearShapes() |> 
-      #   removeLayersControl() 
-      # 
+
   })
   
   d_selected <- reactiveVal()
@@ -335,12 +316,10 @@ server <- function(input, output, session) {
     
     click <- tibble(lng = map_click$lng, lat = map_click$lat) |> 
       sf::st_as_sf(coords= c('lng', 'lat'), crs = sf::st_crs(d_all))
-    print(click)
     
     d_selected <- d() |> 
       sf::st_join(click, left = FALSE)
     
-    print(d_selected)
     
     output$scatter <- renderGirafe({
       scat <- ggplot() +
@@ -395,9 +374,9 @@ server <- function(input, output, session) {
     
     legend <- bi_legend(pal = codec_bi_pal,
                         dim = 3,
-                        xlab = paste0("Greater X Variable"),
-                        ylab = paste0("Greater Y Variable"),
-                        size = 8)
+                        xlab = paste0("Greater ", input$x),
+                        ylab = paste0("Greater ", input$y),
+                        size = 12)
     
     legend
   })

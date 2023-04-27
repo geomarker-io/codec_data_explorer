@@ -31,7 +31,7 @@ d_all <- d_all |>
   left_join(tigris::tracts(state = 'OH', county = "Hamilton", year = 2010), 
                      by = c('census_tract_id_2010' = 'GEOID10')) |> 
     # left_join(cincy::tract_tigris_2010, by = 'census_tract_id_2010') |> 
-     sf::st_as_sf()
+     sf::st_as_sf(crs = '4326')
 
 var_meta <- glimpse_schema(d_all) |> 
   relocate(title, .before = name) |> 
