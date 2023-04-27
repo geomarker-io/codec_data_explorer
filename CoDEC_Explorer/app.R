@@ -200,13 +200,13 @@ server <- function(input, output, session) {
       mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
     
     out <- out |> 
-      mutate(out_lab = paste(get(xvar()), ": ", xvar(), "<br>",
-                             get(yvar()), ": ", yvar()))
+      mutate(out_lab = paste(xvar(), ": ", get(xvar()), "<br>",
+                             yvar(), ": ", get(yvar())))
     
     map <- 
       leaflet(out) |> 
-      setView(-84.55, 39.15, zoom = 11) |> 
-      addProviderTiles(provider = providers$CartoDB.Voyager) |>
+      setView(-84.55, 39.18, zoom = 11.5) |> 
+      addProviderTiles(provider = providers$CartoDB.Positron) |>
       addPolygons(fillColor = ~pal(bi_class), fillOpacity = 0.7, stroke = T, 
                   label = ~lapply(out$out_lab, HTML), 
                   weight = .5, color = "#333333") |> 
@@ -295,14 +295,14 @@ server <- function(input, output, session) {
         mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
       
       out <- out |> 
-        mutate(out_lab = paste(get(xvar()), ": ", xvar(), "<br>",
-                               get(yvar()), ": ", yvar()))
+        mutate(out_lab = paste(xvar(), ": ", get(xvar()), "<br>",
+                               yvar(), ": ", get(yvar())))
       
       map <- 
         leafletProxy("map", data = out) |> 
         clearShapes() |> 
-        setView(-84.55, 39.15, zoom = 11) |> 
-        addProviderTiles(provider = providers$CartoDB.Voyager) |>
+        setView(-84.55, 39.18, zoom = 11.5) |> 
+        addProviderTiles(provider = providers$CartoDB.Positron) |>
         addPolygons(fillColor = ~pal(bi_class), fillOpacity = 0.7, stroke = T, 
                     label = ~lapply(out$out_lab, HTML), 
                     weight = .5, color = "#333333") |> 
@@ -328,18 +328,19 @@ server <- function(input, output, session) {
   
   d_selected <- reactiveVal()
   
-  observeEvent(input$map_shape_click, {
+  observeEvent(input$map_click, {
     
     map_click <- reactiveVal()
     map_click <- input$map_shape_click
-    #print(map_click)
     
-    click <- tibble(lng = map_click$lng, lat = map_click$lat, 
-                    tract_id = str_sub(map_click$id, 2))
-    #print(click)
+    click <- tibble(lng = map_click$lng, lat = map_click$lat) |> 
+      sf::st_as_sf(coords= c('lng', 'lat'), crs = sf::st_crs(d_all))
+    print(click)
     
     d_selected <- d() |> 
-      filter(census_tract_id_2010 == click$tract_id)
+      sf::st_join(click, left = FALSE)
+    
+    print(d_selected)
     
     output$scatter <- renderGirafe({
       scat <- ggplot() +
