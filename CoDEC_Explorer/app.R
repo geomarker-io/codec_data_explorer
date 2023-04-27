@@ -16,48 +16,6 @@ library(tmap)
   
   source('dataset_prep.R')
   
-  # d_drive <- codec_data("hamilton_drivetime") |> 
-  #   select(-year) |> 
-  #   mutate(source = "drive")
-  # 
-  # d_land <- codec_data("hamilton_landcover") |> 
-  #   select(-year) 
-  # 
-  # d_traffic <- codec_data("hamilton_traffic") |> 
-  #   select(-year) 
-  # 
-  # d_acs <- codec_data("hh_acs_measures") |> 
-  #   filter(year == max(year)) 
-  # 
-  # d_indices <- codec_data("tract_indices") 
-  # 
-  # d_property <- codec_data("hamilton_property_code_enforcement") |> 
-  #   select(-year) 
-  # 
-  # 
-  # d_all <- left_join(d_drive, d_land) |> 
-  #   left_join(d_traffic) |> 
-  #   left_join(d_acs) |> 
-  #   left_join(d_indices) |> 
-  #   left_join(d_property, by = c("census_tract_id_2010" = "census_tract_id_2020")) |> 
-  #   select(!where(is.logical)) 
-  # 
-  # # d_all <- d_all |> 
-  # #   rowwise() |> 
-  # #   mutate(source = case_when()) |> 
-  # #   ungroup()
-  # # 
-  # d <- d_indices |> 
-  #   left_join(cincy::tract_tigris_2010, by = 'census_tract_id_2010') |> 
-  #   sf::st_as_sf()
-  # 
-  # var_meta <- glimpse_schema(d) |> 
-  #   relocate(title, .before = name) |> 
-  #   rowwise() |> 
-  #   mutate(title = coalesce(title, name)) |> 
-  #   ungroup()
-  
-  
   codec_bi_pal <- c(
     "1-1" = "#eddcc1",
     "2-1" = "#d4aa92",
@@ -70,33 +28,6 @@ library(tmap)
     "3-3" = "#2b3135"
   )
 }
-
-# sidebar_acc <- bslib::accordion(
-#   open = c("X Variable", "Y Variable"),
-#   accordion_panel(
-#     "X Variable",
-#     shinyWidgets::pickerInput('x',
-#                 label = "",
-#                 choices = names(d),
-#                 multiple = FALSE,
-#                 selected = 'ice',
-#                 options = pickerOptions(
-#                   liveSearch = TRUE
-#                 ))
-#     ),
-#     accordion_panel(
-#       "Y Variable",
-#       shinyWidgets::pickerInput('y',
-#                      label = "", 
-#                      choices = names(d),
-#                      multiple = FALSE,
-#                      selected = 'dep_index',
-#                      options = pickerOptions(
-#                        liveSearch = TRUE
-#                      ))
-#     )
-# )
-                          
 
 ex_card <- card(
   full_screen = TRUE,
@@ -169,8 +100,7 @@ ui <- page_navbar(
      hr(),
      htmlOutput('y_desc'),
      width = '18%'
-  ), # sidebar(sidebar_acc,
-            #        width = '15%'),
+  ), 
   
   nav("Showcase",
       ex_card
@@ -314,9 +244,57 @@ server <- function(input, output, session) {
       theme(plot.margin = margin(0,0,0,0))#
     
     gir_join <- girafe(ggobj = finalScat, width_svg = 3, height_svg = 3,
-                       options = list(opts_sizing(width = 1, rescale = T)))
+                       options = list(opts_sizing(width = 1, rescale = T)),
+                       opts_selection(type = "single"))
+    
     gir_join
     
+  })
+  
+  d_scat_click <- reactiveVal()
+  scat_click <- reactiveVal()
+  
+  observeEvent(input$scatter_selected, {
+    
+    scat_click <- c(input$scatter_selected)
+    
+    d_scat_click <- d() |> 
+      filter(census_tract_id_2010 == scat_click) 
+    
+    output$map <- renderLeaflet({
+      req(input$x)
+      
+      bins_x <- pull(d(), xvar())
+      bins_y <- pull(d(), yvar())
+      
+      bins_x <- classInt::classIntervals(bins_x, n = 3, style = "quantile")
+      bins_y <- classInt::classIntervals(bins_y, n = 3, style = "quantile")
+      
+      bins_x <- bins_x$brks
+      bins_y <- bins_y$brks
+      
+      # cut into groups defined above
+      out <- d() |> 
+        mutate(bi_x = cut(get(xvar()), breaks = bins_x, include.lowest = TRUE))
+      out <- out |> 
+        mutate(bi_y = cut(get(yvar()), breaks = bins_y, include.lowest = TRUE))
+      out <- out|> 
+        mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
+      
+      
+      map <- 
+        tm_basemap("CartoDB.Positron") +
+        tm_shape(out, unit = 'miles') +
+        tm_polygons(col ="bi_class", alpha = 0.7, palette = codec_bi_pal, legend.show = FALSE,
+                    popup.vars = c(xvar(), yvar())) +
+        tm_shape(d_scat_click, unit = 'miles') +
+        tm_borders(col = "white", lwd = 2)
+      
+      map |> 
+        tmap_leaflet(in.shiny = TRUE) |> 
+        removeLayersControl() 
+    
+    })
   })
   
   d_selected <- reactiveVal()
@@ -375,7 +353,8 @@ server <- function(input, output, session) {
         theme(plot.margin = margin(0,0,0,0))#
       
       gir_join <- girafe(ggobj = finalScat, width_svg = 3, height_svg = 3,
-                         options = list(opts_sizing(width = 1, rescale = T)))
+                         options = list(opts_sizing(width = 1, rescale = T)),
+                         opts_selection(type = "single"))
       gir_join
     })
     
