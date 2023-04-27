@@ -27,6 +27,10 @@ library(tmap)
     "2-3" = "#31464d",
     "3-3" = "#2b3135"
   )
+  
+  pal <- colorFactor(codec_bi_pal, factor(out$bi_class, levels = c("1-1","2-1","3-1",
+                                                                   "1-2","2-2","3-2",
+                                                                   "1-3","2-3","3-3")))
 }
 
 ex_card <- card(
@@ -195,16 +199,28 @@ server <- function(input, output, session) {
     out <- out|> 
       mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
     
+    out <- out |> 
+      mutate(out_lab = paste(get(xvar()), ": ", xvar(), "<br>",
+                             get(yvar()), ": ", yvar()))
     
     map <- 
-      tm_basemap("CartoDB.Positron") +
-      tm_shape(out, unit = 'miles') +
-      tm_polygons(col ="bi_class", alpha = 0.7, palette = codec_bi_pal, legend.show = FALSE,
-                  popup.vars = c(xvar(), yvar()))
+      leaflet(out) |> 
+      setView(-84.55, 39.15, zoom = 11) |> 
+      addProviderTiles(provider = providers$CartoDB.Voyager) |>
+      addPolygons(fillColor = ~pal(bi_class), fillOpacity = 0.7, stroke = T, 
+                  label = ~lapply(out$out_lab, HTML), 
+                  weight = .5, color = "#333333") |> 
+      removeLayersControl()
     
-    map |> 
-      tmap_leaflet(in.shiny = TRUE) |> 
-      removeLayersControl() 
+    map  
+    #   tm_basemap("CartoDB.Positron") +
+    #   tm_shape(out, unit = 'miles') +
+    #   tm_polygons(col ="bi_class", alpha = 0.7, palette = codec_bi_pal, legend.show = FALSE,
+    #               popup.vars = c(xvar(), yvar()))
+    # 
+    # map |> 
+    #   tmap_leaflet(in.shiny = TRUE) |> 
+    #   removeLayersControl() 
   })
   
  
@@ -244,8 +260,8 @@ server <- function(input, output, session) {
       theme(plot.margin = margin(0,0,0,0))#
     
     gir_join <- girafe(ggobj = finalScat, width_svg = 3, height_svg = 3,
-                       options = list(opts_sizing(width = 1, rescale = T)),
-                       opts_selection(type = "single"))
+                       options = list(opts_sizing(width = 1, rescale = T),
+                       opts_selection(type = "single")))
     
     gir_join
     
@@ -260,9 +276,6 @@ server <- function(input, output, session) {
     
     d_scat_click <- d() |> 
       filter(census_tract_id_2010 == scat_click) 
-    
-    output$map <- renderLeaflet({
-      req(input$x)
       
       bins_x <- pull(d(), xvar())
       bins_y <- pull(d(), yvar())
@@ -281,20 +294,36 @@ server <- function(input, output, session) {
       out <- out|> 
         mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
       
+      out <- out |> 
+        mutate(out_lab = paste(get(xvar()), ": ", xvar(), "<br>",
+                               get(yvar()), ": ", yvar()))
       
       map <- 
-        tm_basemap("CartoDB.Positron") +
-        tm_shape(out, unit = 'miles') +
-        tm_polygons(col ="bi_class", alpha = 0.7, palette = codec_bi_pal, legend.show = FALSE,
-                    popup.vars = c(xvar(), yvar())) +
-        tm_shape(d_scat_click, unit = 'miles') +
-        tm_borders(col = "white", lwd = 2)
-      
-      map |> 
-        tmap_leaflet(in.shiny = TRUE) |> 
-        removeLayersControl() 
-    
-    })
+        leafletProxy("map", data = out) |> 
+        clearShapes() |> 
+        setView(-84.55, 39.15, zoom = 11) |> 
+        addProviderTiles(provider = providers$CartoDB.Voyager) |>
+        addPolygons(fillColor = ~pal(bi_class), fillOpacity = 0.7, stroke = T, 
+                    label = ~lapply(out$out_lab, HTML), 
+                    weight = .5, color = "#333333") |> 
+        addPolygons(data = d_scat_click, color = "#FFF", stroke = T, weight = 5, opacity = 1) |> 
+        removeLayersControl()
+        
+      map
+      #   tm_basemap("CartoDB.Positron") +
+      #   tm_shape(out, unit = 'miles') +
+      #   tm_polygons(col ="bi_class", alpha = 0.7, palette = codec_bi_pal, legend.show = FALSE,
+      #               popup.vars = c(xvar(), yvar())) +
+      #   tm_shape(d_scat_click, unit = 'miles') +
+      #   tm_borders(col = "white", lwd = 2)
+      # 
+      # map_leaflet <- map |> 
+      #   tmap_leaflet(in.shiny = TRUE) 
+      # 
+      # leafletProxy("map") |> 
+      #   clearShapes() |> 
+      #   removeLayersControl() 
+      # 
   })
   
   d_selected <- reactiveVal()
@@ -353,8 +382,8 @@ server <- function(input, output, session) {
         theme(plot.margin = margin(0,0,0,0))#
       
       gir_join <- girafe(ggobj = finalScat, width_svg = 3, height_svg = 3,
-                         options = list(opts_sizing(width = 1, rescale = T)),
-                         opts_selection(type = "single"))
+                         options = list(opts_sizing(width = 1, rescale = T),
+                         opts_selection(type = "single")))
       gir_join
     })
     
