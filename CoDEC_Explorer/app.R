@@ -28,6 +28,20 @@ library(tmap)
     "3-3" = "#2b3135"
   )
   
+  codec_bi_pal_2 <- tibble(
+    "1-1" = "#eddcc1",
+    "2-1" = "#d4aa92",
+    "3-1" = "#bb7964",
+    "1-2" = "#909992",
+    "2-2" = "#81766f",
+    "3-2" = "#71544c",
+    "1-3" = "#375a66",
+    "2-3" = "#31464d",
+    "3-3" = "#2b3135"
+  ) |> 
+    gather("group", "fill") |> 
+    arrange(group)
+  
   pal <- colorFactor(codec_bi_pal, factor(out$bi_class, levels = c("1-1","2-1","3-1",
                                                                    "1-2","2-2","3-2",
                                                                    "1-3","2-3","3-3")))
@@ -79,7 +93,7 @@ data_card <- card(
 
 ui <- page_navbar(
   theme = bs_theme(version = 5,
-                  # bootswatch = "litera",
+                 #  bootswatch = "zephyr",
                   "bg" = "#FFFFFF",
                   "fg" = "#396175",
                   "primary" = "#C28273",
@@ -205,6 +219,7 @@ server <- function(input, output, session) {
       mutate(out_lab = paste(xvar(), ": ", get(xvar()), "<br>",
                              yvar(), ": ", get(yvar())))
     
+    
     map <- 
       leaflet(out) |> 
       setView(-84.55, 39.18, zoom = 11.5) |> 
@@ -222,10 +237,79 @@ server <- function(input, output, session) {
   output$scatter <- renderGirafe({
     req(input$x)
     
-    scat <- ggplot(d()) +
-      geom_point_interactive(aes_string(x = xvar(), y = yvar(),
+    bins_x <- pull(d(), xvar())
+    bins_y <- pull(d(), yvar())
+    
+    bins_x <- classInt::classIntervals(bins_x, n = 3, style = "quantile")
+    bins_y <- classInt::classIntervals(bins_y, n = 3, style = "quantile")
+    
+    bins_x <- bins_x$brks
+    bins_y <- bins_y$brks
+    
+    # cut into groups defined above
+    out_scat <- d() |> 
+      mutate(bi_x = cut(get(xvar()), breaks = bins_x, include.lowest = TRUE, labels = c("1", "2", "3")))
+    out_scat <- out_scat |> 
+      mutate(bi_y = cut(get(yvar()), breaks = bins_y, include.lowest = TRUE, labels = c("1", "2", "3")))
+    out_scat <- out_scat |> 
+      mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
+    
+    scatter_panels <- ggplot(out_scat, aes_string(x = xvar(), y = yvar())) +
+      annotate("rect", 
+               xmin = -Inf, xmax = bins_x[2],  
+               ymin = -Inf, ymax = bins_y[2],
+               alpha = 1,
+               fill = codec_bi_pal_2$fill[1]) + 
+      annotate("rect", 
+               xmin = -Inf, xmax = bins_x[2],  
+               ymin = bins_y[2], ymax = bins_y[3],
+               alpha = 1,
+               fill = codec_bi_pal_2$fill[2]) +
+      annotate("rect", 
+               xmin = -Inf, xmax = bins_x[2], 
+               ymin = bins_y[3], ymax = Inf,
+               alpha = 1,
+               fill = codec_bi_pal_2$fill[3]) + 
+      annotate("rect", 
+               xmin = bins_x[2], xmax = bins_x[3], 
+               ymin = -Inf, ymax = bins_y[2],
+               alpha = 1,
+               fill = codec_bi_pal_2$fill[4]) + 
+      annotate("rect", 
+               xmin = bins_x[2], xmax = bins_x[3],  
+               ymin = bins_y[2], ymax = bins_y[3],
+               alpha = 1,
+               fill = codec_bi_pal_2$fill[5]) + 
+      annotate("rect", 
+               xmin = bins_x[2], xmax = bins_x[3],  
+               ymin = bins_y[3], ymax = Inf,
+               alpha = 1,
+               fill = codec_bi_pal_2$fill[6]) + 
+      annotate("rect", 
+               xmin = bins_x[3], xmax = Inf,  
+               ymin = -Inf, ymax = bins_y[2],
+               alpha = 1,
+               fill = codec_bi_pal_2$fill[7]) + 
+      annotate("rect", 
+               xmin = bins_x[3], xmax = Inf, 
+               ymin = bins_y[2], ymax = bins_y[3],
+               alpha = 1,
+               fill = codec_bi_pal_2$fill[8]) + 
+      annotate("rect", 
+               xmin = bins_x[3], xmax = Inf,  
+               ymin = bins_y[3], ymax = Inf,
+               alpha = 1,
+               fill = codec_bi_pal_2$fill[9])
+    
+    
+    scat <- scatter_panels +
+      geom_point_interactive(data = d(), aes_string(x = xvar(), y = yvar(),
                                         data_id = "census_tract_id_2010"), 
-                             color = codec_colors()[7]) +
+                             fill = codec_colors()[7], 
+                             alpha = .8,
+                             shape = 21,
+                             color = "grey20", 
+                             stroke = .5) +
       theme_light() +
       theme(aspect.ratio = 1, title = element_text(size = 8),
             axis.title = element_text(size = 6),
@@ -322,10 +406,80 @@ server <- function(input, output, session) {
     
     
     output$scatter <- renderGirafe({
-      scat <- ggplot() +
+      req(input$x)
+      
+      bins_x <- pull(d(), xvar())
+      bins_y <- pull(d(), yvar())
+      
+      bins_x <- classInt::classIntervals(bins_x, n = 3, style = "quantile")
+      bins_y <- classInt::classIntervals(bins_y, n = 3, style = "quantile")
+      
+      bins_x <- bins_x$brks
+      bins_y <- bins_y$brks
+      
+      # cut into groups defined above
+      out_scat <- d() |> 
+        mutate(bi_x = cut(get(xvar()), breaks = bins_x, include.lowest = TRUE, labels = c("1", "2", "3")))
+      out_scat <- out_scat |> 
+        mutate(bi_y = cut(get(yvar()), breaks = bins_y, include.lowest = TRUE, labels = c("1", "2", "3")))
+      out_scat <- out_scat |> 
+        mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
+      
+      scatter_panels <- ggplot(out_scat, aes_string(x = xvar(), y = yvar())) +
+        annotate("rect", 
+                 xmin = -Inf, xmax = bins_x[2],  
+                 ymin = -Inf, ymax = bins_y[2],
+                 alpha = 1,
+                 fill = codec_bi_pal_2$fill[1]) + 
+        annotate("rect", 
+                 xmin = -Inf, xmax = bins_x[2],  
+                 ymin = bins_y[2], ymax = bins_y[3],
+                 alpha = 1,
+                 fill = codec_bi_pal_2$fill[2]) +
+        annotate("rect", 
+                 xmin = -Inf, xmax = bins_x[2], 
+                 ymin = bins_y[3], ymax = Inf,
+                 alpha = 1,
+                 fill = codec_bi_pal_2$fill[3]) + 
+        annotate("rect", 
+                 xmin = bins_x[2], xmax = bins_x[3], 
+                 ymin = -Inf, ymax = bins_y[2],
+                 alpha = 1,
+                 fill = codec_bi_pal_2$fill[4]) + 
+        annotate("rect", 
+                 xmin = bins_x[2], xmax = bins_x[3],  
+                 ymin = bins_y[2], ymax = bins_y[3],
+                 alpha = 1,
+                 fill = codec_bi_pal_2$fill[5]) + 
+        annotate("rect", 
+                 xmin = bins_x[2], xmax = bins_x[3],  
+                 ymin = bins_y[3], ymax = Inf,
+                 alpha = 1,
+                 fill = codec_bi_pal_2$fill[6]) + 
+        annotate("rect", 
+                 xmin = bins_x[3], xmax = Inf,  
+                 ymin = -Inf, ymax = bins_y[2],
+                 alpha = 1,
+                 fill = codec_bi_pal_2$fill[7]) + 
+        annotate("rect", 
+                 xmin = bins_x[3], xmax = Inf, 
+                 ymin = bins_y[2], ymax = bins_y[3],
+                 alpha = 1,
+                 fill = codec_bi_pal_2$fill[8]) + 
+        annotate("rect", 
+                 xmin = bins_x[3], xmax = Inf,  
+                 ymin = bins_y[3], ymax = Inf,
+                 alpha = 1,
+                 fill = codec_bi_pal_2$fill[9])
+      
+      scat <- scatter_panels +
         geom_point_interactive(data = d(), aes_string(x = xvar(), y = yvar(),
                                           data_id = "census_tract_id_2010"),
-                               color = codec_colors()[7]) +
+                               fill = codec_colors()[7], 
+                               alpha = .8,
+                               shape = 21,
+                               color = "grey20", 
+                               stroke = .5) +
         geom_point_interactive(data = d_selected,
                                aes_string(x = xvar(), y = yvar(),
                                           data_id = "census_tract_id_2010"),
