@@ -49,25 +49,31 @@ library(tmap)
 
 ex_card <- card(
   full_screen = TRUE,
-  card_header("Data Explorer"),
+  card_header("Data Explorer",
+              class = "d-flex justify-content-between",
+              shinyWidgets::prettySwitch("big_plot",
+                                         label = "Enlarge scatter plot",
+                                         slim = TRUE)),
   leafletOutput("map"),
-  absolutePanel(id = "plot_panel",
-                class = "panel panel-default",
-                cursor = "inherit",
-                draggable = TRUE,
-                top = 100,
-                height = "400px",
-                right = 20,
-                width = '400px',
-                style =
-                  "padding: 5px;
-                         border: 1px solid #000;
-                         background: #FFFFFF;
-                         opacity: .9;
-                         margin: auto;
-                         border-radius: 5pt;
-                         box-shadow: 0pt 0pt 6pt 0px rgba(61,59,61,0.48);",
-                fixedRow(girafeOutput("scatter", height = "350px", width = "350px"))),
+  uiOutput("plot_panel")
+)
+  # absolutePanel(id = "plot_panel",
+  #               class = "panel panel-default",
+  #               cursor = "inherit",
+  #               draggable = TRUE,
+  #               top = 100,
+  #               height = "400px", #if (input$big_plot == FALSE) {"400px"} else { "1000px"},
+  #               right = 20,
+  #               width = "400px", #if (input$big_plot == FALSE) {"400px"} else { "1000px"},
+  #               style =
+  #                 "padding: 5px;
+  #                        border: 1px solid #000;
+  #                        background: #FFFFFF;
+  #                        opacity: .9;
+  #                        margin: auto;
+  #                        border-radius: 5pt;
+  #                        box-shadow: 0pt 0pt 6pt 0px rgba(61,59,61,0.48);",
+  #               fixedRow(girafeOutput("scatter", height = "350px", width = "350px"))),
   
   # absolutePanel(id = "legend_panel",
   #               bottom = 20,
@@ -83,7 +89,7 @@ ex_card <- card(
   #                        border-radius: 5pt;
   #                        box-shadow: 0pt 0pt 0pt 0px rgba(61,59,61,0.48);",
   #               plotOutput("legend", width = "145px", height = "145px"))
-)
+#)
 
 data_card <- card(
   card_header("Data Catalog"),
@@ -107,10 +113,10 @@ ui <- page_navbar(
   fillable = TRUE,
   
   sidebar = sidebar(
-     checkboxGroupInput(inputId = "core", #shinyWidgets::prettyCheckboxGroup
-                                       label = strong("Select the CoDEC cores you would like to include:"),
-                                       choices = core_names$title,
-                                       selected = "Census Tract-Level Neighborhood Indices"),
+    checkboxGroupInput(inputId = "core",
+                       label = strong("Select the CoDEC cores you would like to include:"),
+                       choices = core_names$title,
+                       selected = "Census Tract-Level Neighborhood Indices"),
      uiOutput("x_sel"),
      uiOutput("y_sel"),
      hr(),
@@ -312,7 +318,7 @@ server <- function(input, output, session) {
                              stroke = .5) +
       theme_light() +
       theme(aspect.ratio = 1, title = element_text(size = 8),
-            axis.title = element_text(size = 6),
+            axis.title = element_text(size = if (input$big_plot == FALSE) {6} else {10}),
             legend.key.size = unit(3,"mm")) +
       labs(x = paste0(input$x), y = paste0(input$y))
     
@@ -337,7 +343,9 @@ server <- function(input, output, session) {
       draw_plot(scat2) + #, 0, 0, 1, 1, vjust = -.2) 
       theme(plot.margin = margin(0,0,0,0))#
     
-    gir_join <- girafe(ggobj = finalScat, width_svg = 3, height_svg = 3,
+    gir_join <- girafe(ggobj = finalScat, 
+                       width_svg = if (input$big_plot == FALSE) {3} else {6}, 
+                       height_svg = if (input$big_plot == FALSE) {3} else {6},
                        options = list(opts_sizing(width = 1, rescale = T),
                        opts_selection(type = "single")))
     
@@ -490,7 +498,7 @@ server <- function(input, output, session) {
                                color = codec_colors()[1], size = 3, alpha = .6) +
         theme_light() +
         theme(aspect.ratio = 1, title = element_text(size = 8),
-              axis.title = element_text(size = 6),
+              axis.title = element_text(size = if (input$big_plot == FALSE) {6} else {10}),
               legend.key.size = unit(3,"mm")) +
         labs(x = paste0(input$x), y = paste0(input$y))
       
@@ -515,7 +523,9 @@ server <- function(input, output, session) {
         draw_plot(scat2) + #, 0, 0, 1, 1, vjust = -.2)
         theme(plot.margin = margin(0,0,0,0))#
       
-      gir_join <- girafe(ggobj = finalScat, width_svg = 3, height_svg = 3,
+      gir_join <- girafe(ggobj = finalScat, 
+                         width_svg = if (input$big_plot == FALSE) {3} else {6}, 
+                         height_svg = if (input$big_plot == FALSE) {3} else {6},
                          options = list(opts_sizing(width = 1, rescale = T),
                          opts_selection(type = "single")))
       gir_join
@@ -590,6 +600,28 @@ server <- function(input, output, session) {
     # #purrr::map(codec_glimpses, make_md)
     # # codec_glimpses[[1]] |> 
     # #   make_md()
+  })
+    
+  output$plot_panel <- renderUI({
+    absolutePanel(id = "plot_panel",
+                  class = "panel panel-default",
+                  cursor = "inherit",
+                  draggable = TRUE,
+                  top = 100,
+                  height = if (input$big_plot == FALSE) {"400px"} else { "900px"},
+                  right = 20,
+                  width = if (input$big_plot == FALSE) {"400px"} else { "1000px"},
+                  style =
+                    "padding: 5px;
+                         border: 1px solid #000;
+                         background: #FFFFFF;
+                         opacity: .9;
+                         margin: auto;
+                         border-radius: 5pt;
+                         box-shadow: 0pt 0pt 6pt 0px rgba(61,59,61,0.48);",
+                  fixedRow(girafeOutput("scatter", 
+                                        height = if (input$big_plot == FALSE) {"350px"} else { "800px"}, 
+                                        width = if (input$big_plot == FALSE) {"350px"} else { "800px"})))
   })
 
 }
