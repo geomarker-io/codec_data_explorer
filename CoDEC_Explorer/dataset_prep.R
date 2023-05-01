@@ -94,4 +94,19 @@ core_meta <- rbind(
 ) 
 
 core_names <- tibble("title" = filter(core_meta, name == 'title')$value, "name" = filter(core_meta, name == 'name')$value) 
+
+d_names_dupes <- d_names |> 
+  left_join(core_names, by = c('core' = 'name')) |> 
+  rename(title = "title.x", core_title = "title.y") |> 
+  filter(duplicated(title)) |> 
+  mutate(title = paste0(title, " - ", core_title)) 
+
+d_names <-  d_names |> 
+  left_join(core_names, by = c('core' = 'name')) |> 
+  rename(title = "title.x", core_title = "title.y") |> 
+  filter(!duplicated(title)) |> 
+  rbind(d_names_dupes)
+
+
+
   
