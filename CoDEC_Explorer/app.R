@@ -97,9 +97,8 @@ data_card <- card(
   DT::dataTableOutput("table")
 )
 
-ui <- page_navbar(
+ui <- navbarPage(
   theme = bs_theme(version = 5,
-                 #  bootswatch = "zephyr",
                   "bg" = "#FFFFFF",
                   "fg" = "#396175",
                   "primary" = "#C28273",
@@ -117,15 +116,21 @@ ui <- page_navbar(
                        label = strong("Select the CoDEC cores you would like to include:"),
                        choices = core_names$title,
                        selected = "Census Tract-Level Neighborhood Indices"),
-     uiOutput("x_sel"),
-     uiOutput("y_sel"),
-     hr(),
-     plotOutput("legend"),
-     hr(),
-     htmlOutput('x_desc'),
-     hr(),
-     htmlOutput('y_desc'),
-     width = '20%'
+    layout_column_wrap(
+      width = 1/2,
+      actionButton('select_all', label = "Select All", style = "fill", color = "primary"),
+      actionButton('deselect_all', label = "Deselect All", style = "fill", color = "primary"),
+    ),
+    hr(),
+    uiOutput("x_sel"),
+    uiOutput("y_sel"),
+    hr(),
+    plotOutput("legend"),
+    hr(),
+    htmlOutput('x_desc'),
+    hr(),
+    htmlOutput('y_desc'),
+    width = '20%'
   ), 
   
   nav("Showcase",
@@ -622,6 +627,15 @@ server <- function(input, output, session) {
                   fixedRow(girafeOutput("scatter", 
                                         height = if (input$big_plot == FALSE) {"350px"} else { "800px"}, 
                                         width = if (input$big_plot == FALSE) {"350px"} else { "800px"})))
+  })
+  
+  observeEvent(input$select_all, {
+    updateCheckboxGroupInput(inputId = 'core', selected = core_names$title)
+    
+  })
+  
+  observeEvent(input$deselect_all, {
+    updateCheckboxGroupInput(inputId = 'core', selected = "")
   })
 
 }
