@@ -53,7 +53,7 @@ ex_card <- card(
               class = "d-flex justify-content-between",
               shinyWidgets::prettySwitch("big_plot",
                                          label = "Enlarge scatter plot",
-                                         slim = TRUE)),
+                                         status = "primary")),
   leafletOutput("map"),
   uiOutput("plot_panel")
 )
@@ -107,7 +107,11 @@ ui <- navbarPage(
                   "btn-border-radius" = "0.25rem" ),
 
   
-  title = " CoDEC Explorer",
+  title = tags$span(
+    tags$img(src = "logo.svg", 
+             width = "30px", height = "auto"),
+    "CoDEC Explorer"
+  ),
   
   fillable = TRUE,
   
@@ -130,7 +134,7 @@ ui <- navbarPage(
     htmlOutput('x_desc'),
     hr(),
     htmlOutput('y_desc'),
-    width = '20%'
+    width = '18%'
   ), 
   
   nav("Showcase",
@@ -138,7 +142,20 @@ ui <- navbarPage(
   ),
   
   nav("Data Catalog",
-      data_card)
+      data_card
+      ),
+  
+  nav_spacer(),
+  
+  nav_item(
+    tags$a(
+      tags$span(
+        bsicons::bs_icon("github")
+      ),
+      href = "https://github.com/geomarker-io/codec_data_explorer",
+      target = "_blank"
+    )
+  )
   
 )
 
