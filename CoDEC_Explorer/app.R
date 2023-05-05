@@ -10,6 +10,7 @@ library(ggExtra)
 library(shinyWidgets)
 library(leaflet)
 library(tmap)
+library(bsplus)
 
 {
   tmap_mode("view")
@@ -49,55 +50,43 @@ library(tmap)
 
 ex_card <- card(
   full_screen = TRUE,
-  card_header("Data Explorer",
+  card_header("Bivariate Map",
               class = "d-flex justify-content-between",
               shinyWidgets::prettySwitch("big_plot",
                                          label = "Enlarge scatter plot",
                                          status = "primary")),
+  layout_sidebar(
+    fillable = TRUE,
+    sidebar(
+      div(img(src = "logo.svg", 
+               width = "150px", height = "auto", style = "display: block; margin-left: auto; margin-right: auto;")),
+      checkboxGroupInput(inputId = "core",
+                         label = strong("Select the CoDEC cores you would like to include:"),
+                         choices = core_names$title,
+                         selected = "Census Tract-Level Neighborhood Indices"),
+      layout_column_wrap(
+        width = 1/2,
+        actionButton('select_all', label = "Select All", style = "fill", color = "primary"),
+        actionButton('deselect_all', label = "Deselect All", style = "fill", color = "primary"),
+      ),
+      hr(),
+      uiOutput("x_sel"),
+      uiOutput("y_sel"),
+      # hr(),
+      # plotOutput("legend"),
+      hr(),
+      htmlOutput('x_desc'),
+      hr(),
+      htmlOutput('y_desc'),
+      width = '18%'
+    ),
   leafletOutput("map"),
   uiOutput("plot_panel")
-)
-  # absolutePanel(id = "plot_panel",
-  #               class = "panel panel-default",
-  #               cursor = "inherit",
-  #               draggable = TRUE,
-  #               top = 100,
-  #               height = "400px", #if (input$big_plot == FALSE) {"400px"} else { "1000px"},
-  #               right = 20,
-  #               width = "400px", #if (input$big_plot == FALSE) {"400px"} else { "1000px"},
-  #               style =
-  #                 "padding: 5px;
-  #                        border: 1px solid #000;
-  #                        background: #FFFFFF;
-  #                        opacity: .9;
-  #                        margin: auto;
-  #                        border-radius: 5pt;
-  #                        box-shadow: 0pt 0pt 6pt 0px rgba(61,59,61,0.48);",
-  #               fixedRow(girafeOutput("scatter", height = "350px", width = "350px"))),
-  
-  # absolutePanel(id = "legend_panel",
-  #               bottom = 20,
-  #               left = 20,
-  #               height = "160px",
-  #               width = "160px",
-  #               style =
-  #                 "padding: 5px;
-  #                        border: 1px solid #000;
-  #                        background: #FFFFFF;
-  #                        opacity: .7;
-  #                        margin: auto;
-  #                        border-radius: 5pt;
-  #                        box-shadow: 0pt 0pt 0pt 0px rgba(61,59,61,0.48);",
-  #               plotOutput("legend", width = "145px", height = "145px"))
-#)
-
-data_card <- card(
-  card_header("Data Catalog"),
-  h2("Hamilton County Landcover and Built Environment Characteristics"),
-  DT::dataTableOutput("table")
+  )
 )
 
-ui <- navbarPage(
+
+ui <- page_fillable(
   theme = bs_theme(version = 5,
                   "bg" = "#FFFFFF",
                   "fg" = "#396175",
@@ -105,57 +94,8 @@ ui <- navbarPage(
                   "grid-gutter-width" = "0.0rem",
                   "border-radius" = "0.5rem",
                   "btn-border-radius" = "0.25rem" ),
-
-  
-  title = tags$span(
-    tags$img(src = "logo.svg", 
-             width = "30px", height = "auto"),
-    "CoDEC Explorer"
-  ),
-  
-  fillable = TRUE,
-  
-  sidebar = sidebar(
-    checkboxGroupInput(inputId = "core",
-                       label = strong("Select the CoDEC cores you would like to include:"),
-                       choices = core_names$title,
-                       selected = "Census Tract-Level Neighborhood Indices"),
-    layout_column_wrap(
-      width = 1/2,
-      actionButton('select_all', label = "Select All", style = "fill", color = "primary"),
-      actionButton('deselect_all', label = "Deselect All", style = "fill", color = "primary"),
-    ),
-    hr(),
-    uiOutput("x_sel"),
-    uiOutput("y_sel"),
-    hr(),
-    plotOutput("legend"),
-    hr(),
-    htmlOutput('x_desc'),
-    hr(),
-    htmlOutput('y_desc'),
-    width = '18%'
-  ), 
-  
-  nav("Showcase",
-      ex_card
-  ),
-  
-  nav("Data Catalog",
-      data_card
-      ),
-  
-  nav_spacer(),
-  
-  nav_item(
-    tags$a(
-      tags$span(
-        bsicons::bs_icon("github")
-      ),
-      href = "https://github.com/geomarker-io/codec_data_explorer",
-      target = "_blank"
-    )
-  )
+ 
+ ex_card
   
 )
 
@@ -560,8 +500,8 @@ server <- function(input, output, session) {
     
     legend <- bi_legend(pal = codec_bi_pal,
                         dim = 3,
-                        xlab = paste0("Greater ", input$x),
-                        ylab = paste0("Greater ", input$y),
+                        xlab = paste0("Higher X Variable"),
+                        ylab = paste0("Higher Y Variable"),
                         size = 12)
     
     legend
@@ -652,7 +592,18 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$deselect_all, {
+    
+    #d_sel_metrics2 <- d_sel_metrics() |> 
+    #  filter(title %in% c(input$x, input$y))
+    
+    #sticky_x <- input$x
+    #sticky_y <- input$y
+    
     updateCheckboxGroupInput(inputId = 'core', selected = "")
+    
+    #updatePickerInput(session = session, inputId = 'x', selected = sticky_x, choices = d_sel_metrics2$title)
+    #updatePickerInput(session = session, inputId = 'y', selected = sticky_y, choices = d_sel_metrics2$title)
+    
   })
 
 }
