@@ -10,7 +10,6 @@ library(ggExtra)
 library(shinyWidgets)
 library(leaflet)
 library(tmap)
-library(bsplus)
 
 {
   tmap_mode("view")
@@ -43,23 +42,31 @@ library(bsplus)
     gather("group", "fill") |> 
     arrange(group)
   
-  pal <- colorFactor(codec_bi_pal, factor(out$bi_class, levels = c("1-1","2-1","3-1",
-                                                                   "1-2","2-2","3-2",
-                                                                   "1-3","2-3","3-3")))
 }
 
+
+
 ex_card <- card(
-  full_screen = TRUE,
   card_header("Bivariate Map",
-              class = "d-flex justify-content-between",
+              actionBttn('legend_modal',
+                         style = "material-circle",
+                         #color = "primary",
+                         label = NULL,
+                         size = 'xs',
+                         block = FALSE,
+                         icon = icon("question-circle")) |> 
+                         tagAppendAttributes(style = "color: #C28273; background-color: #FFFFFF"),
+              
               shinyWidgets::prettySwitch("big_plot",
                                          label = "Enlarge scatter plot",
-                                         status = "primary")),
+                                         status = "primary") |> 
+                tagAppendAttributes(style = "float: right"),
+              ),
   layout_sidebar(
     fillable = TRUE,
     sidebar(
       div(img(src = "logo.svg", 
-               width = "150px", height = "auto", style = "display: block; margin-left: auto; margin-right: auto;")),
+               width = "125px", height = "auto", style = "display: block; margin-left: auto; margin-right: auto;")),
       checkboxGroupInput(inputId = "core",
                          label = strong("Select the CoDEC cores you would like to include:"),
                          choices = core_names$title,
@@ -72,8 +79,6 @@ ex_card <- card(
       hr(),
       uiOutput("x_sel"),
       uiOutput("y_sel"),
-      # hr(),
-      # plotOutput("legend"),
       hr(),
       htmlOutput('x_desc'),
       hr(),
@@ -85,7 +90,6 @@ ex_card <- card(
   )
 )
 
-
 ui <- page_fillable(
   theme = bs_theme(version = 5,
                   "bg" = "#FFFFFF",
@@ -94,9 +98,9 @@ ui <- page_fillable(
                   "grid-gutter-width" = "0.0rem",
                   "border-radius" = "0.5rem",
                   "btn-border-radius" = "0.25rem" ),
- 
- ex_card
   
+ 
+  ex_card
 )
 
 
@@ -187,6 +191,9 @@ server <- function(input, output, session) {
       mutate(out_lab = paste(xvar(), ": ", get(xvar()), "<br>",
                              yvar(), ": ", get(yvar())))
     
+    pal <- colorFactor(codec_bi_pal, factor(out$bi_class, levels = c("1-1","2-1","3-1",
+                                                                     "1-2","2-2","3-2",
+                                                                     "1-3","2-3","3-3")))
     
     map <- 
       leaflet(out) |> 
@@ -345,6 +352,10 @@ server <- function(input, output, session) {
       out <- out |> 
         mutate(out_lab = paste(xvar(), ": ", get(xvar()), "<br>",
                                yvar(), ": ", get(yvar())))
+      
+      pal <- colorFactor(codec_bi_pal, factor(out$bi_class, levels = c("1-1","2-1","3-1",
+                                                                       "1-2","2-2","3-2",
+                                                                       "1-3","2-3","3-3")))
       
       map <- 
         leafletProxy("map", data = out) |> 
@@ -519,50 +530,6 @@ server <- function(input, output, session) {
     paste0(strong(input$y), ": ", var_meta |> filter(title == input$y) |> pull(description))
   })
   
-  output$table <- DT::renderDataTable({
-    
-    d_table <- read_rds('2020_all_codec_nosf.rds')
-    
-    
-    DT::datatable(head(d_table[[2]]),
-                  rownames = FALSE,
-                  options = list(dom = 't',
-                                 ordering = FALSE,
-                                 paging = FALSE,
-                                 searching = FALSE),
-                  selection = 'none',
-                  class = 'row-border',
-                  escape = FALSE,
-                  filter = "none")
-    
-    # codec_glimpses <-
-    #   fs::path_package("codec") |>
-    #   fs::path("codec_data") |>
-    #   fs::dir_ls(glob = "*tabular-data-resource.yaml", recurse = TRUE) |>
-    #   purrr::map(read_tdr_csv) |>
-    #   purrr::map(glimpse_tdr)
-    # 
-    # make_md <- function(.x) {
-    #   ttl <- .x$attributes[.x$attributes$name == "title", "value"][[1]]
-    #   nm <- .x$attributes[.x$attributes$name == "name", "value"][[1]]
-    #   options(knitr.kable.NA = "")
-    #   c(
-    #     glue::glue("## {{ttl}} {.tabset}\n\n", .open = "{{", .close = "}}"),
-    #     "\n\n### Attributes \n\n",
-    #     paste0(knitr::kable(.x$attributes), sep = "\n"),
-    #     "\n\n### Schema \n\n",
-    #     paste0(knitr::kable(.x$schema), sep = "\n"),
-    #     "\n\n### Download \n\n",
-    #     glue::glue("read in R: `codec::codec_data(\"{nm}\")`"),
-    #     "\n\n"
-    #   ) |>
-    #     paste(sep = "\n\n")
-    # }
-    # 
-    # #purrr::map(codec_glimpses, make_md)
-    # # codec_glimpses[[1]] |> 
-    # #   make_md()
-  })
     
   output$plot_panel <- renderUI({
     absolutePanel(id = "plot_panel",
@@ -584,6 +551,7 @@ server <- function(input, output, session) {
                   fixedRow(girafeOutput("scatter", 
                                         height = if (input$big_plot == FALSE) {"350px"} else { "800px"}, 
                                         width = if (input$big_plot == FALSE) {"350px"} else { "800px"})))
+    
   })
   
   observeEvent(input$select_all, {
@@ -604,6 +572,17 @@ server <- function(input, output, session) {
     #updatePickerInput(session = session, inputId = 'x', selected = sticky_x, choices = d_sel_metrics2$title)
     #updatePickerInput(session = session, inputId = 'y', selected = sticky_y, choices = d_sel_metrics2$title)
     
+  })
+  
+  observeEvent(input$legend_modal, {
+    showModal(
+      modalDialog(
+        title = "About Bivariate Maps",
+        p("Bivariate maps use a blended color scale to visualize two variables at the same time"),
+        plotOutput("legend"),
+        easyClose = TRUE
+        )
+    )
   })
 
 }
