@@ -24,7 +24,14 @@ d_all <- left_join(d_drive, d_land, by = "census_tract_id_2010") |>
   left_join(d_traffic, by = "census_tract_id_2010") |> 
   left_join(d_acs, by = "census_tract_id_2010") |> 
   left_join(d_indices, by = "census_tract_id_2010") |> 
-  left_join(d_property, by = c("census_tract_id_2010" = "census_tract_id_2020")) |> 
+  left_join(d_property, by = c("census_tract_id_2010" = "census_tract_id_2020")) 
+
+d_all_log <- d_all |> 
+  select(where(is.logical)) |> 
+  pivot_longer(cols = everything(), names_to = 'name', values_to = 'value') |> 
+  distinct(name)
+
+d_all <- d_all |> 
   select(!where(is.logical)) 
 
 d_all <- d_all |> 
@@ -38,6 +45,9 @@ var_meta <- glimpse_schema(d_all) |>
   rowwise() |> 
   mutate(title = coalesce(title, name)) |> 
   ungroup()
+
+var_meta$description <- var_meta$description |> 
+  replace_na("No description available")
 
 d_indices_names <- d_indices |> 
   pivot_longer(cols = -census_tract_id_2010, names_to = "name", values_to = "value") |> 
@@ -83,6 +93,9 @@ d_names <- d_names |>
   rowwise() |> 
   mutate(title = coalesce(title, name)) |> 
   ungroup()
+
+d_names <- d_names |> 
+  filter(!name %in% d_all_log$name)
 
 core_meta <- rbind(
   glimpse_tdr(d_drive)$attributes,
