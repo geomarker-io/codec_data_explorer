@@ -99,6 +99,8 @@ ui <- page_fillable(
                   "border-radius" = "0.5rem",
                   "btn-border-radius" = "0.25rem" ),
   
+  tags$head(
+    tags$style(type="text/css", "text {font-family: sans-serif}"))
  
   ex_card
 )
@@ -112,8 +114,19 @@ server <- function(input, output, session) {
   })
   
   d_sel_metrics <- reactive({
+    
     d_names |> 
       filter(core %in% d_sel_cores()$name)
+    #| title == sticky_x | title == sticky_y)
+    
+    # if (is.null(sticky_x()) | is.null(sticky_y())) {
+    # d_names |>
+    #   filter(core %in% d_sel_cores()$name)
+    # }
+    # else if (!is.null(sticky_x()) | !is.null(sticky_y())) {
+    #   d_names |>
+    #     filter(title == sticky_x() | title == sticky_y())
+    # }
   })
   
   d <- reactive({
@@ -130,6 +143,7 @@ server <- function(input, output, session) {
                               options = pickerOptions(
                                 liveSearch = TRUE
                               ))
+    
   })
   
   output$y_sel <- renderUI({
@@ -559,13 +573,10 @@ server <- function(input, output, session) {
     
   })
   
+  
+  
   observeEvent(input$deselect_all, {
-    
-    #d_sel_metrics2 <- d_sel_metrics() |> 
-    #  filter(title %in% c(input$x, input$y))
-    
-    #sticky_x <- input$x
-    #sticky_y <- input$y
+  
     
     updateCheckboxGroupInput(inputId = 'core', selected = "")
     
