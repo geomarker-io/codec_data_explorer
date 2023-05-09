@@ -100,7 +100,7 @@ ui <- page_fillable(
                   "btn-border-radius" = "0.25rem" ),
   
   tags$head(
-    tags$style(type="text/css", "text {font-family: sans-serif}"))
+    tags$style(type="text/css", "text {font-family: sans-serif}")),
  
   ex_card
 )
@@ -548,7 +548,7 @@ server <- function(input, output, session) {
   output$plot_panel <- renderUI({
     absolutePanel(id = "plot_panel",
                   class = "panel panel-default",
-                  cursor = "inherit",
+                  cursor = "auto",
                   draggable = TRUE,
                   top = 100,
                   height = if (input$big_plot == FALSE) {"400px"} else { "900px"},
