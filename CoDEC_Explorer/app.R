@@ -79,6 +79,10 @@ ex_card <- card(
       hr(),
       uiOutput("x_sel"),
       uiOutput("y_sel"),
+      shinyWidgets::prettySwitch("univariate_switch",
+                                 label = "Univariate view",
+                                 status = "primary") |> 
+        tagAppendAttributes(style = "float: right"),
       hr(),
       htmlOutput('x_desc'),
       hr(),
@@ -101,12 +105,26 @@ ui <- page_fillable(
   
   tags$head(
     tags$style(type="text/css", "text {font-family: sans-serif}")),
+  
+  shinyjs::useShinyjs(),
  
   ex_card
 )
 
 
 server <- function(input, output, session) {
+  
+  observeEvent(input$univariate_switch, {
+    
+    if (input$univariate_switch == T) {
+      shinyjs::disable('y_sel')
+      shinyjs::hide(id = 'y_desc')
+    } else {
+      shinyjs::enable('y_sel')
+      shinyjs::show('y_desc')
+    }
+    
+    })
   
   d_sel_cores <- reactive({
     core_names |> 
