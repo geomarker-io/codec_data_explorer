@@ -578,123 +578,219 @@ server <- function(input, output, session) {
     output$scatter <- renderGirafe({
       req(input$x)
       
-      bins_x <- pull(d(), xvar())
-      bins_y <- pull(d(), yvar())
+      if (input$univariate_switch == F) {
       
-      bins_x <- classInt::classIntervals(bins_x, n = 3, style = "quantile")
-      bins_y <- classInt::classIntervals(bins_y, n = 3, style = "quantile")
-      
-      bins_x <- bins_x$brks
-      bins_y <- bins_y$brks
-      
-      # cut into groups defined above
-      out_scat <- d() |> 
-        mutate(bi_x = cut(get(xvar()), breaks = bins_x, include.lowest = TRUE, labels = c("1", "2", "3")))
-      out_scat <- out_scat |> 
-        mutate(bi_y = cut(get(yvar()), breaks = bins_y, include.lowest = TRUE, labels = c("1", "2", "3")))
-      out_scat <- out_scat |> 
-        mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
-      
-      scatter_panels <- ggplot(out_scat, aes_string(x = xvar(), y = yvar())) +
-        annotate("rect", 
-                 xmin = -Inf, xmax = bins_x[2],  
-                 ymin = -Inf, ymax = bins_y[2],
-                 alpha = 1,
-                 fill = codec_bi_pal_2$fill[1]) + 
-        annotate("rect", 
-                 xmin = -Inf, xmax = bins_x[2],  
-                 ymin = bins_y[2], ymax = bins_y[3],
-                 alpha = 1,
-                 fill = codec_bi_pal_2$fill[2]) +
-        annotate("rect", 
-                 xmin = -Inf, xmax = bins_x[2], 
-                 ymin = bins_y[3], ymax = Inf,
-                 alpha = 1,
-                 fill = codec_bi_pal_2$fill[3]) + 
-        annotate("rect", 
-                 xmin = bins_x[2], xmax = bins_x[3], 
-                 ymin = -Inf, ymax = bins_y[2],
-                 alpha = 1,
-                 fill = codec_bi_pal_2$fill[4]) + 
-        annotate("rect", 
-                 xmin = bins_x[2], xmax = bins_x[3],  
-                 ymin = bins_y[2], ymax = bins_y[3],
-                 alpha = 1,
-                 fill = codec_bi_pal_2$fill[5]) + 
-        annotate("rect", 
-                 xmin = bins_x[2], xmax = bins_x[3],  
-                 ymin = bins_y[3], ymax = Inf,
-                 alpha = 1,
-                 fill = codec_bi_pal_2$fill[6]) + 
-        annotate("rect", 
-                 xmin = bins_x[3], xmax = Inf,  
-                 ymin = -Inf, ymax = bins_y[2],
-                 alpha = 1,
-                 fill = codec_bi_pal_2$fill[7]) + 
-        annotate("rect", 
-                 xmin = bins_x[3], xmax = Inf, 
-                 ymin = bins_y[2], ymax = bins_y[3],
-                 alpha = 1,
-                 fill = codec_bi_pal_2$fill[8]) + 
-        annotate("rect", 
-                 xmin = bins_x[3], xmax = Inf,  
-                 ymin = bins_y[3], ymax = Inf,
-                 alpha = 1,
-                 fill = codec_bi_pal_2$fill[9])
-      
-      scat <- scatter_panels +
-        geom_point_interactive(data = d(), aes_string(x = xvar(), y = yvar(),
-                                          data_id = "census_tract_id_2010"),
-                               fill = codec_colors()[7], 
-                               alpha = .8,
-                               shape = 21,
-                               color = "grey20", 
-                               stroke = .5) +
-        geom_point_interactive(data = d_selected,
-                               aes_string(x = xvar(), y = yvar(),
-                                          data_id = "census_tract_id_2010"),
-                               #  tooltip = paste0(
-                               #   input$x, ": ", xvar(), "\n",
-                               #    input$y, ": ", yvar()
-                               #   )),
-                               color = codec_colors()[1], size = 3, alpha = .6) +
-        theme_light() +
-        theme(aspect.ratio = 1, title = element_text(size = 8),
-              axis.title = element_text(size = if (input$big_plot == FALSE) {6} else {10}),
-              legend.key.size = unit(3,"mm")) +
-        labs(x = paste0(input$x), y = paste0(input$y))
-      
-      hist1 <- ggplot(d()) +
-        geom_histogram_interactive(aes_string(x = xvar(), tooltip = "census_tract_id_2010",
-                                              data_id = "census_tract_id_2010"),
-                                   fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
-        theme_minimal()
-      
-      hist2 <- ggplot(d()) +
-        geom_histogram_interactive(aes_string(x = yvar(), tooltip = "census_tract_id_2010",
-                                              data_id = "census_tract_id_2010"),
-                                   fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
-        coord_flip() +
-        theme_minimal()
-      
-      scat1 <- insert_xaxis_grob(scat, hist1, position = "bottom")
-      scat2 <- insert_yaxis_grob(scat1, hist2, position = "right")
-      #scat_full <- ggdraw(scat2)
-      
-      finalScat <- ggdraw() +
-        draw_plot(scat2) + #, 0, 0, 1, 1, vjust = -.2)
-        theme(plot.margin = margin(0,0,0,0))#
-      
-      gir_join <- girafe(ggobj = finalScat, 
-                         width_svg = if (input$big_plot == FALSE) {3} else {6}, 
-                         height_svg = if (input$big_plot == FALSE) {3} else {6},
-                         options = list(opts_sizing(width = 1, rescale = T),
-                         opts_selection(type = "single")))
-      gir_join
+        bins_x <- pull(d(), xvar())
+        bins_y <- pull(d(), yvar())
+        
+        bins_x <- classInt::classIntervals(bins_x, n = 3, style = "quantile")
+        bins_y <- classInt::classIntervals(bins_y, n = 3, style = "quantile")
+        
+        bins_x <- bins_x$brks
+        bins_y <- bins_y$brks
+        
+        # cut into groups defined above
+        out_scat <- d() |> 
+          mutate(bi_x = cut(get(xvar()), breaks = bins_x, include.lowest = TRUE, labels = c("1", "2", "3")))
+        out_scat <- out_scat |> 
+          mutate(bi_y = cut(get(yvar()), breaks = bins_y, include.lowest = TRUE, labels = c("1", "2", "3")))
+        out_scat <- out_scat |> 
+          mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
+        
+        scatter_panels <- ggplot(out_scat, aes_string(x = xvar(), y = yvar())) +
+          annotate("rect", 
+                   xmin = -Inf, xmax = bins_x[2],  
+                   ymin = -Inf, ymax = bins_y[2],
+                   alpha = 1,
+                   fill = codec_bi_pal_2$fill[1]) + 
+          annotate("rect", 
+                   xmin = -Inf, xmax = bins_x[2],  
+                   ymin = bins_y[2], ymax = bins_y[3],
+                   alpha = 1,
+                   fill = codec_bi_pal_2$fill[2]) +
+          annotate("rect", 
+                   xmin = -Inf, xmax = bins_x[2], 
+                   ymin = bins_y[3], ymax = Inf,
+                   alpha = 1,
+                   fill = codec_bi_pal_2$fill[3]) + 
+          annotate("rect", 
+                   xmin = bins_x[2], xmax = bins_x[3], 
+                   ymin = -Inf, ymax = bins_y[2],
+                   alpha = 1,
+                   fill = codec_bi_pal_2$fill[4]) + 
+          annotate("rect", 
+                   xmin = bins_x[2], xmax = bins_x[3],  
+                   ymin = bins_y[2], ymax = bins_y[3],
+                   alpha = 1,
+                   fill = codec_bi_pal_2$fill[5]) + 
+          annotate("rect", 
+                   xmin = bins_x[2], xmax = bins_x[3],  
+                   ymin = bins_y[3], ymax = Inf,
+                   alpha = 1,
+                   fill = codec_bi_pal_2$fill[6]) + 
+          annotate("rect", 
+                   xmin = bins_x[3], xmax = Inf,  
+                   ymin = -Inf, ymax = bins_y[2],
+                   alpha = 1,
+                   fill = codec_bi_pal_2$fill[7]) + 
+          annotate("rect", 
+                   xmin = bins_x[3], xmax = Inf, 
+                   ymin = bins_y[2], ymax = bins_y[3],
+                   alpha = 1,
+                   fill = codec_bi_pal_2$fill[8]) + 
+          annotate("rect", 
+                   xmin = bins_x[3], xmax = Inf,  
+                   ymin = bins_y[3], ymax = Inf,
+                   alpha = 1,
+                   fill = codec_bi_pal_2$fill[9])
+        
+        scat <- scatter_panels +
+          geom_point_interactive(data = d(), aes_string(x = xvar(), y = yvar(),
+                                                        data_id = "census_tract_id_2010"),
+                                 fill = codec_colors()[7], 
+                                 alpha = .8,
+                                 shape = 21,
+                                 color = "grey20", 
+                                 stroke = .5) +
+          geom_point_interactive(data = d_selected,
+                                 aes_string(x = xvar(), y = yvar(),
+                                            data_id = "census_tract_id_2010"),
+                                 #  tooltip = paste0(
+                                 #   input$x, ": ", xvar(), "\n",
+                                 #    input$y, ": ", yvar()
+                                 #   )),
+                                 color = codec_colors()[1], size = 3, alpha = .6) +
+          theme_light() +
+          theme(aspect.ratio = 1, title = element_text(size = 8),
+                axis.title = element_text(size = if (input$big_plot == FALSE) {6} else {10}),
+                legend.key.size = unit(3,"mm")) +
+          labs(x = paste0(input$x), y = paste0(input$y))
+        
+        hist1 <- ggplot(d()) +
+          geom_histogram_interactive(aes_string(x = xvar(), tooltip = "census_tract_id_2010",
+                                                data_id = "census_tract_id_2010"),
+                                     fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
+          theme_minimal()
+        
+        hist2 <- ggplot(d()) +
+          geom_histogram_interactive(aes_string(x = yvar(), tooltip = "census_tract_id_2010",
+                                                data_id = "census_tract_id_2010"),
+                                     fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
+          coord_flip() +
+          theme_minimal()
+        
+        scat1 <- insert_xaxis_grob(scat, hist1, position = "bottom")
+        scat2 <- insert_yaxis_grob(scat1, hist2, position = "right")
+        #scat_full <- ggdraw(scat2)
+        
+        finalScat <- ggdraw() +
+          draw_plot(scat2) + #, 0, 0, 1, 1, vjust = -.2)
+          theme(plot.margin = margin(0,0,0,0))#
+        
+        gir_join <- girafe(ggobj = finalScat, 
+                           width_svg = if (input$big_plot == FALSE) {3} else {6}, 
+                           height_svg = if (input$big_plot == FALSE) {3} else {6},
+                           options = list(opts_sizing(width = 1, rescale = T),
+                                          opts_selection(type = "single")))
+        gir_join
+        
+      } else {
+        
+        bins_x <- pull(d(), xvar())
+        
+        bins_x <- classInt::classIntervals(bins_x, n = 8, style = "quantile")
+        
+        bins_x <- bins_x$brks
+        
+        # cut into groups defined above
+        out_scat <- d() |> 
+          mutate(bi_x = cut(get(xvar()), breaks = bins_x, include.lowest = TRUE)) |> 
+          mutate(x_class = paste0(as.numeric(bi_x)))
+        
+        scatter_panels <- ggplot(out_scat, aes_string(x = xvar())) +
+          annotate("rect", 
+                   xmin = -Inf, xmax = bins_x[2],  
+                   ymin = -Inf, ymax = Inf,
+                   alpha = 1,
+                   fill = codec_colors()[1]) + 
+          annotate("rect", 
+                   xmin = bins_x[2], xmax = bins_x[3], 
+                   ymin = -Inf, ymax = Inf,  
+                   alpha = 1,
+                   fill = codec_colors()[2]) +
+          annotate("rect", 
+                   xmin = bins_x[3], xmax = bins_x[4],  
+                   ymin = -Inf, ymax = Inf,
+                   alpha = 1,
+                   fill = codec_colors()[3]) + 
+          annotate("rect", 
+                   xmin = bins_x[4], xmax = bins_x[5], 
+                   ymin = -Inf, ymax = Inf,
+                   alpha = 1,
+                   fill = codec_colors()[4]) + 
+          annotate("rect", 
+                   xmin = bins_x[5], xmax = bins_x[6], 
+                   ymin = -Inf, ymax = Inf,
+                   alpha = 1,
+                   fill = codec_colors()[5]) + 
+          annotate("rect", 
+                   xmin = bins_x[6], xmax = bins_x[7],   
+                   ymin = -Inf, ymax = Inf,
+                   alpha = 1,
+                   fill = codec_colors()[6]) + 
+          annotate("rect", 
+                   xmin = bins_x[7], xmax = bins_x[8],   
+                   ymin = -Inf, ymax = Inf,
+                   alpha = 1,
+                   fill = codec_colors()[7]) + 
+          annotate("rect", 
+                   xmin = bins_x[8], xmax = Inf,  
+                   ymin = -Inf, ymax = Inf,
+                   alpha = 1,
+                   fill = codec_colors()[8]) 
+        
+       # print(d_selected)
+        
+        scat <- scatter_panels +
+          geom_histogram_interactive(d(), mapping = aes_string(x = xvar(), tooltip = "census_tract_id_2010",
+                                                               data_id = "census_tract_id_2010"),
+                                     bins = 20,
+                                     alpha = .6,
+                                     fill = "grey70", 
+                                     color = "grey50") +
+          geom_segment(d_selected, 
+                                mapping = aes_string(
+                                  x = xvar(), 
+                                  xend = xvar(),
+                                  y = -1,
+                                  yend = 0),
+                                  #xmin = xvar() - .05, 
+                                  #xmax = xvar() + .05,
+                                  #ymin = 0,
+                                  #ymax = Inf),
+                       arrow = arrow(length = unit(1, "mm"), type = "closed"),
+                       color = "black") +
+          theme_light() +
+          theme(aspect.ratio = 1, title = element_text(size = 8),
+                axis.title = element_text(size = if (input$big_plot == FALSE) {6} else {10}),
+                legend.key.size = unit(3,"mm")) +
+          labs(x = paste0(input$x), y = "") 
+        #xlim(min(d()$xvar()), max(d()$xvar())) +
+        #ylim(0, 50) 
+        
+        gir_join <- girafe(ggobj = scat, 
+                           width_svg = if (input$big_plot == FALSE) {3} else {6}, 
+                           height_svg = if (input$big_plot == FALSE) {3} else {6},
+                           options = list(opts_sizing(width = 1, rescale = T),
+                                          opts_selection(type = "single")))
+        
+        gir_join
+        
+      }
+      })
+    
+    
     })
-    
-    
-  })
   
   output$legend <- renderPlot({
     
