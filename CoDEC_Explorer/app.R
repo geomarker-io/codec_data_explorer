@@ -42,6 +42,8 @@ library(tmap)
     gather("group", "fill") |> 
     arrange(group)
   
+  uni_colors <- c(codec_colors()[1], "#567D91", "#789BAC", "#9FBAC8", "#CCDCE3", "#F6EDDE")
+  
 }
 
 
@@ -245,7 +247,7 @@ server <- function(input, output, session) {
       
       bins_x <- pull(d(), xvar())
       
-      bins_x <- classInt::classIntervals(bins_x, n = 8, style = "quantile")
+      bins_x <- classInt::classIntervals(bins_x, n = 6, style = "quantile")
       
       bins_x <- bins_x$brks
       
@@ -257,9 +259,8 @@ server <- function(input, output, session) {
       out <- out |> 
         mutate(out_lab = paste(xvar(), ": ", get(xvar())))
       
-      pal <- colorFactor(codec_colors(), factor(out$x_class, levels = c("1", "2", "3",
-                                                                     "4", "5", "6",
-                                                                     "7", "8")))
+      pal <- colorFactor(uni_colors, factor(out$x_class, levels = c("1", "2", "3",
+                                                                     "4", "5", "6")))
       
       map <- 
         leaflet(out) |> 
@@ -392,7 +393,7 @@ server <- function(input, output, session) {
     } else {
       bins_x <- pull(d(), xvar())
       
-      bins_x <- classInt::classIntervals(bins_x, n = 8, style = "quantile")
+      bins_x <- classInt::classIntervals(bins_x, n = 6, style = "quantile")
       
       bins_x <- bins_x$brks
       
@@ -411,37 +412,27 @@ server <- function(input, output, session) {
                xmin = bins_x[2], xmax = bins_x[3], 
                ymin = -Inf, ymax = Inf,  
                alpha = 1,
-               fill = codec_colors()[2]) +
+               fill = "#567D91") +
       annotate("rect", 
                xmin = bins_x[3], xmax = bins_x[4],  
                ymin = -Inf, ymax = Inf,
                alpha = 1,
-               fill = codec_colors()[3]) + 
+               fill = "#789BAC") + 
       annotate("rect", 
                xmin = bins_x[4], xmax = bins_x[5], 
                ymin = -Inf, ymax = Inf,
                alpha = 1,
-               fill = codec_colors()[4]) + 
+               fill = "#9FBAC8") + 
       annotate("rect", 
                xmin = bins_x[5], xmax = bins_x[6], 
                ymin = -Inf, ymax = Inf,
                alpha = 1,
-               fill = codec_colors()[5]) + 
+               fill = "#CCDCE3") + 
       annotate("rect", 
-               xmin = bins_x[6], xmax = bins_x[7],   
+               xmin = bins_x[6], xmax = Inf,   
                ymin = -Inf, ymax = Inf,
                alpha = 1,
-               fill = codec_colors()[6]) + 
-      annotate("rect", 
-               xmin = bins_x[7], xmax = bins_x[8],   
-               ymin = -Inf, ymax = Inf,
-               alpha = 1,
-               fill = codec_colors()[7]) + 
-      annotate("rect", 
-               xmin = bins_x[8], xmax = Inf,  
-               ymin = -Inf, ymax = Inf,
-               alpha = 1,
-               fill = codec_colors()[8]) 
+               fill = "#F6EDDE") 
     
     scat <- scatter_panels +
       geom_histogram_interactive(d(), mapping = aes_string(x = xvar(), tooltip = "census_tract_id_2010",
@@ -529,7 +520,7 @@ server <- function(input, output, session) {
       
       bins_x <- pull(d(), xvar())
       
-      bins_x <- classInt::classIntervals(bins_x, n = 8, style = "quantile")
+      bins_x <- classInt::classIntervals(bins_x, n = 6, style = "quantile")
       
       bins_x <- bins_x$brks
       
@@ -541,9 +532,10 @@ server <- function(input, output, session) {
       out <- out |> 
         mutate(out_lab = paste(xvar(), ": ", get(xvar())))
       
-      pal <- colorFactor(codec_colors(), factor(out$x_class, levels = c("1", "2", "3",
-                                                                        "4", "5", "6",
-                                                                        "7", "8")))
+      
+      
+      pal <- colorFactor(uni_colors, factor(out$x_class, levels = c("1", "2", "3",
+                                                                        "4", "5", "6")))
       
       map <- 
         leafletProxy("map", data = out) |> 
@@ -698,7 +690,7 @@ server <- function(input, output, session) {
         
         bins_x <- pull(d(), xvar())
         
-        bins_x <- classInt::classIntervals(bins_x, n = 8, style = "quantile")
+        bins_x <- classInt::classIntervals(bins_x, n = 6, style = "quantile")
         
         bins_x <- bins_x$brks
         
@@ -717,37 +709,37 @@ server <- function(input, output, session) {
                    xmin = bins_x[2], xmax = bins_x[3], 
                    ymin = -Inf, ymax = Inf,  
                    alpha = 1,
-                   fill = codec_colors()[2]) +
+                   fill = "#567D91") +
           annotate("rect", 
                    xmin = bins_x[3], xmax = bins_x[4],  
                    ymin = -Inf, ymax = Inf,
                    alpha = 1,
-                   fill = codec_colors()[3]) + 
+                   fill = "#789BAC") + 
           annotate("rect", 
                    xmin = bins_x[4], xmax = bins_x[5], 
                    ymin = -Inf, ymax = Inf,
                    alpha = 1,
-                   fill = codec_colors()[4]) + 
+                   fill = "#9FBAC8") + 
           annotate("rect", 
                    xmin = bins_x[5], xmax = bins_x[6], 
                    ymin = -Inf, ymax = Inf,
                    alpha = 1,
-                   fill = codec_colors()[5]) + 
+                   fill = "#CCDCE3") + 
           annotate("rect", 
-                   xmin = bins_x[6], xmax = bins_x[7],   
+                   xmin = bins_x[6], xmax = Inf,   
                    ymin = -Inf, ymax = Inf,
                    alpha = 1,
-                   fill = codec_colors()[6]) + 
-          annotate("rect", 
-                   xmin = bins_x[7], xmax = bins_x[8],   
-                   ymin = -Inf, ymax = Inf,
-                   alpha = 1,
-                   fill = codec_colors()[7]) + 
-          annotate("rect", 
-                   xmin = bins_x[8], xmax = Inf,  
-                   ymin = -Inf, ymax = Inf,
-                   alpha = 1,
-                   fill = codec_colors()[8]) 
+                   fill = "#F6EDDE") 
+          # annotate("rect", 
+          #          xmin = bins_x[7], xmax = bins_x[8],   
+          #          ymin = -Inf, ymax = Inf,
+          #          alpha = 1,
+          #          fill = codec_colors()[7]) + 
+          # annotate("rect", 
+          #          xmin = bins_x[8], xmax = Inf,  
+          #          ymin = -Inf, ymax = Inf,
+          #          alpha = 1,
+          #          fill = codec_colors()[8]) 
         
        # print(d_selected)
         
