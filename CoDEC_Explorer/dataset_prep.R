@@ -14,7 +14,8 @@ d_acs <- codec_data("hh_acs_measures") |>
   filter(year == max(year)) |> 
   select(-contains("moe"), -year)
   
-d_indices <- codec_data("tract_indices") 
+d_indices <- codec_data("tract_indices") |> 
+  select(-year) 
 
 d_property <- codec_data("hamilton_property_code_enforcement") |> 
   select(-year) 
