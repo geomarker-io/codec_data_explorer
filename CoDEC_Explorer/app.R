@@ -14,7 +14,20 @@ library(tmap)
 {
   tmap_mode("view")
   
+  
+  
   source('dataset_prep.R')
+  
+  # out <- collect_data(selected_geo)
+  # 
+  # d_all <- out |> 
+  #   pluck(1)
+  # var_meta <- out |> 
+  #   pluck(2)
+  # core_names <- out |> 
+  #   pluck(3)
+  # d_names <- out |> 
+  #   pluck(4)
   
   codec_bi_pal <- c(
     "1-1" = "#eddcc1",
@@ -69,6 +82,13 @@ ex_card <- card(
     sidebar(
       div(img(src = "logo.svg", 
                width = "125px", height = "auto", style = "display: block; margin-left: auto; margin-right: auto;")),
+      hr(),
+      radioButtons(inputId = "sel_geo",
+                   label = strong("Select your geographic unit:"),
+                   choiceNames = c("Census Tract", "ZCTA (Zip Code Area)", "Neighborhood"),
+                   choiceValues = c("census_tract_id", 'zcta', 'neighborhood'),
+                   selected = "census_tract_id"),
+      
       checkboxGroupInput(inputId = "core",
                          label = strong("Select the CoDEC cores you would like to include:"),
                          choices = core_names$title,
@@ -116,6 +136,52 @@ ui <- page_fillable(
 
 server <- function(input, output, session) {
   
+  d <- d_all
+  
+  d <- eventReactive(input$sel_geo, {
+   # d_all #|> 
+    #select(matches(d_sel_cores()$name))
+  
+  
+ # observeEvent(input$sel_geo, {
+    
+    selected_geo <- input$sel_geo
+    
+    geo_option <- tibble("geo" = c("census_tract_id", "zcta", "neighborhood"),
+                       "cincy_name" = list(cincy::tract_tigris_2010, cincy::zcta_tigris_2010, cincy::neigh_cchmc_2010))
+    
+    d_to_int <- d_all 
+    
+    # if (grepl('^3', d_to_int[1,1])){ 
+    #   colnames(d_to_int)[1] <- c("census_tract_id")
+    # } else if (grepl('^4', d_to_int[1,1])) {
+    #   colnames(d_to_int)[1] <- c("zcta")
+    # } else if (!grepl('^3', d_to_int[1,1]) & !grepl('^4', d_to_int[1,1])){
+    #   colnames(d_to_int)[1] <- c("neighborhood")
+    # }
+    
+    colnames(d_to_int)[1] <- 
+      case_when(grepl('^3', d_to_int[1,1]) ~  c("census_tract_id"),
+                grepl('^4', d_to_int[1,1]) ~ c("zcta"),
+                !grepl('^3', d_to_int[1,1]) & !grepl('^4', d_to_int[1,1]) ~ c("neighborhood"))
+    
+    d_all <- cincy::interpolate(from = d_to_int, 
+                       to = geo_option |> 
+                         filter(geo == selected_geo) |> 
+                         pull(cincy_name) |> 
+                         pluck(1), 
+                       weights = "pop")
+    
+    colnames(d_all)[1] <- c("geo_index")
+    
+   # d_all <- sf::st_transform(d_all, crs = 5072)
+    
+    d_all
+  })
+  
+ # })
+  
+  
   observeEvent(input$univariate_switch, {
     
     if (input$univariate_switch == T) {
@@ -149,10 +215,7 @@ server <- function(input, output, session) {
     # }
   })
   
-  d <- reactive({
-    d_all #|> 
-      #select(matches(d_sel_cores()$name))
-  })
+  
   
   output$x_sel <- renderUI({
     shinyWidgets::pickerInput(inputId = 'x',
@@ -203,6 +266,7 @@ server <- function(input, output, session) {
   
   output$map <- renderLeaflet({
     
+    
     req(input$x)
     
     if (input$univariate_switch == F) {
@@ -233,6 +297,8 @@ server <- function(input, output, session) {
                                                                        "1-2","2-2","3-2",
                                                                        "1-3","2-3","3-3")))
       
+      out <- sf::st_transform(out, crs = "NAD83")
+      
       map <- 
         leaflet(out) |> 
         setView(-84.55, 39.18, zoom = 11.5) |> 
@@ -261,6 +327,8 @@ server <- function(input, output, session) {
       
       pal <- colorFactor(uni_colors, factor(out$x_class, levels = c("1", "2", "3",
                                                                      "4", "5", "6")))
+      
+      out <- sf::st_transform(out, crs = "NAD83")
       
       map <- 
         leaflet(out) |> 
@@ -350,7 +418,7 @@ server <- function(input, output, session) {
       
       scat <- scatter_panels +
         geom_point_interactive(data = d(), aes_string(x = xvar(), y = yvar(),
-                                                      data_id = "census_tract_id_2010"), 
+                                                      data_id = "geo_index"), 
                                fill = codec_colors()[7], 
                                alpha = .8,
                                shape = 21,
@@ -363,14 +431,14 @@ server <- function(input, output, session) {
         labs(x = paste0(input$x), y = paste0(input$y))
       
       hist1 <- ggplot(d()) +
-        geom_histogram_interactive(aes_string(x = xvar(), tooltip = "census_tract_id_2010", 
-                                              data_id = "census_tract_id_2010"), 
+        geom_histogram_interactive(aes_string(x = xvar(), tooltip = "geo_index", 
+                                              data_id = "geo_index"), 
                                    fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
         theme_minimal()
       
       hist2 <- ggplot(d()) +
-        geom_histogram_interactive(aes_string(x = yvar(), tooltip = "census_tract_id_2010", 
-                                              data_id = "census_tract_id_2010"), 
+        geom_histogram_interactive(aes_string(x = yvar(), tooltip = "geo_index", 
+                                              data_id = "geo_index"), 
                                    fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
         coord_flip() + 
         theme_minimal()
@@ -435,8 +503,8 @@ server <- function(input, output, session) {
                fill = "#F6EDDE") 
     
     scat <- scatter_panels +
-      geom_histogram_interactive(d(), mapping = aes_string(x = xvar(), tooltip = "census_tract_id_2010",
-                                            data_id = "census_tract_id_2010"),
+      geom_histogram_interactive(d(), mapping = aes_string(x = xvar(), tooltip = "geo_index",
+                                            data_id = "geo_index"),
                                  bins = 20,
                                  alpha = .6,
                                  fill = "grey70", 
@@ -498,6 +566,9 @@ server <- function(input, output, session) {
                                                                        "1-2","2-2","3-2",
                                                                        "1-3","2-3","3-3")))
       
+      out <- sf::st_transform(out, crs = "NAD83")
+      d_scat_click <- sf::st_transform(d_scat_click, crs = 'NAD_83')
+      
       map <- 
         leafletProxy("map", data = out) |> 
         clearShapes() |> 
@@ -536,6 +607,9 @@ server <- function(input, output, session) {
       
       pal <- colorFactor(uni_colors, factor(out$x_class, levels = c("1", "2", "3",
                                                                         "4", "5", "6")))
+      
+      out <- sf::st_transform(out, crs = "NAD83")
+      d_scat_click <- sf::st_transform(d_scat_click, crs = 'NAD_83')
       
       map <- 
         leafletProxy("map", data = out) |> 
@@ -638,7 +712,7 @@ server <- function(input, output, session) {
         
         scat <- scatter_panels +
           geom_point_interactive(data = d(), aes_string(x = xvar(), y = yvar(),
-                                                        data_id = "census_tract_id_2010"),
+                                                        data_id = "geo_index"),
                                  fill = codec_colors()[7], 
                                  alpha = .8,
                                  shape = 21,
@@ -646,7 +720,7 @@ server <- function(input, output, session) {
                                  stroke = .5) +
           geom_point_interactive(data = d_selected,
                                  aes_string(x = xvar(), y = yvar(),
-                                            data_id = "census_tract_id_2010"),
+                                            data_id = "geo_index"),
                                  #  tooltip = paste0(
                                  #   input$x, ": ", xvar(), "\n",
                                  #    input$y, ": ", yvar()
@@ -659,14 +733,14 @@ server <- function(input, output, session) {
           labs(x = paste0(input$x), y = paste0(input$y))
         
         hist1 <- ggplot(d()) +
-          geom_histogram_interactive(aes_string(x = xvar(), tooltip = "census_tract_id_2010",
-                                                data_id = "census_tract_id_2010"),
+          geom_histogram_interactive(aes_string(x = xvar(), tooltip = "geo_index",
+                                                data_id = "geo_index"),
                                      fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
           theme_minimal()
         
         hist2 <- ggplot(d()) +
-          geom_histogram_interactive(aes_string(x = yvar(), tooltip = "census_tract_id_2010",
-                                                data_id = "census_tract_id_2010"),
+          geom_histogram_interactive(aes_string(x = yvar(), tooltip = "geo_index",
+                                                data_id = "geo_index"),
                                      fill = codec_colors()[2], bins = 20, color = codec_colors()[3]) +
           coord_flip() +
           theme_minimal()
@@ -744,8 +818,8 @@ server <- function(input, output, session) {
        # print(d_selected)
         
         scat <- scatter_panels +
-          geom_histogram_interactive(d(), mapping = aes_string(x = xvar(), tooltip = "census_tract_id_2010",
-                                                               data_id = "census_tract_id_2010"),
+          geom_histogram_interactive(d(), mapping = aes_string(x = xvar(), tooltip = "geo_index",
+                                                               data_id = "geo_index"),
                                      bins = 20,
                                      alpha = .6,
                                      fill = "grey70", 
