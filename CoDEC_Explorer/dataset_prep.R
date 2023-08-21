@@ -42,7 +42,8 @@ d_all <- d_all |>
   select(!where(is.logical)) 
 
 d_all <- d_all |> 
-   sf::st_as_sf()
+  sf::st_as_sf() |> 
+  sf::st_transform(4326)
 
 var_meta <- glimpse_schema(d_all) |> 
   relocate(title, .before = name) |> 

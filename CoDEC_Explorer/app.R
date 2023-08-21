@@ -149,7 +149,7 @@ server <- function(input, output, session) {
     
     colnames(d_all)[1] <- c("geo_index")
     
-   # d_all <- sf::st_transform(d_all, crs = 5072)
+    d_all <- sf::st_transform(d_all, crs = 4326)
     
     d_all
   })
@@ -600,14 +600,8 @@ server <- function(input, output, session) {
     click <- tibble(lng = map_click$lng, lat = map_click$lat) |> 
       sf::st_as_sf(coords= c('lng', 'lat'), crs = sf::st_crs(d_all))
     
-    #print(sf::st_crs(click))
-    #print(sf::st_crs(d()))
-    #sf::st_transform()
-    
     d_selected <- d() |> 
       sf::st_join(click, left = FALSE)
-    
-    print(d_selected)
     
     output$scatter <- renderGirafe({
       req(input$x)
