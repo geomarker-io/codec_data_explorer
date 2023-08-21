@@ -81,7 +81,7 @@ ex_card <- card(
       hr(),
       radioButtons(inputId = "sel_geo",
                    label = strong("Select your", a("geographic unit:", href = "https://geomarker.io/cincy/articles/geographies.html", target = "_blank")),
-                   choiceNames = c("Census Tract", "ZCTA (Zip Code Area)", "Neighborhood"),
+                   choiceNames = c("Census Tract", "Zip Code Tabulation Area", "Neighborhood"),
                    choiceValues = c("census_tract_id", 'zcta', 'neighborhood'),
                    selected = "census_tract_id"),
       
@@ -143,8 +143,9 @@ server <- function(input, output, session) {
     
     selected_geo <- input$sel_geo
     
-    geo_option <- tibble("geo" = c("census_tract_id", "zcta", "neighborhood"),
-                       "cincy_name" = list(cincy::tract_tigris_2010, cincy::zcta_tigris_2010, cincy::neigh_cchmc_2010))
+   # geo_option <- tibble("geo" = c("census_tract_id", "zcta", "neighborhood"),
+    #                   "cincy_name" = list(cincy::tract_tigris_2010, cincy::zcta_tigris_2010, cincy::neigh_cchmc_2010))
+    geo_option <- paste0("cincy::",selected_geo,"_tigris_2010")
     
     d_to_int <- d_all 
     
@@ -156,16 +157,22 @@ server <- function(input, output, session) {
     #   colnames(d_to_int)[1] <- c("neighborhood")
     # }
     
-    colnames(d_to_int)[1] <- 
-      case_when(grepl('^3', d_to_int[1,1]) ~  c("census_tract_id"),
-                grepl('^4', d_to_int[1,1]) ~ c("zcta"),
-                !grepl('^3', d_to_int[1,1]) & !grepl('^4', d_to_int[1,1]) ~ c("neighborhood"))
+   # colnames(d_to_int)[1] <- 
+    d_to_int <- d_to_int |> 
+      rename_with(
+        ~case_when(
+          str_starts(d_to_int$geo_index[1], '3') ~  c("census_tract_id"),
+          str_starts(d_to_int$geo_index[1], '4') ~ c("zcta"),
+          !str_starts(d_to_int$geo_index[1],  '3') & !str_starts(d_to_int$geo_index[1], '3') ~ c("neighborhood")),
+        .cols = 'geo_index')
+    #grepl('^4', d_to_int[1,1]) ~ c("zcta"),
+    #!grepl('^3', d_to_int[1,1]) & !grepl('^4', d_to_int[1,1]) ~ c("neighborhood"))
     
     d_all <- cincy::interpolate(from = d_to_int, 
-                       to = geo_option |> 
-                         filter(geo == selected_geo) |> 
-                         pull(cincy_name) |> 
-                         pluck(1), 
+                       to = geo_option, # |> 
+                       #   filter(geo == selected_geo) |> 
+                       #   pull(cincy_name) |> 
+                       #   pluck(1), 
                        weights = "pop")
     
     colnames(d_all)[1] <- c("geo_index")
