@@ -14,17 +14,6 @@ library(leaflet)
   
   source('dataset_prep.R')
   
-  # out <- collect_data(selected_geo)
-  # 
-  # d_all <- out |> 
-  #   pluck(1)
-  # var_meta <- out |> 
-  #   pluck(2)
-  # core_names <- out |> 
-  #   pluck(3)
-  # d_names <- out |> 
-  #   pluck(4)
-  
   codec_bi_pal <- c(
     "1-1" = "#eddcc1",
     "2-1" = "#d4aa92",
@@ -82,8 +71,8 @@ ex_card <- card(
       radioButtons(inputId = "sel_geo",
                    label = strong("Select your", a("geographic unit:", href = "https://geomarker.io/cincy/articles/geographies.html", target = "_blank")),
                    choiceNames = c("Census Tract", "Zip Code Tabulation Area", "Neighborhood"),
-                   choiceValues = c("census_tract_id", 'zcta', 'neighborhood'),
-                   selected = "census_tract_id"),
+                   choiceValues = c("tract", 'zcta', 'neighborhood'),
+                   selected = "tract"),
       
       checkboxGroupInput(inputId = "core",
                          label = strong("Select the CoDEC cores you would like to include:"),
@@ -135,29 +124,17 @@ server <- function(input, output, session) {
   d <- d_all
   
   d <- eventReactive(input$sel_geo, {
-   # d_all #|> 
-    #select(matches(d_sel_cores()$name))
-  
-  
- # observeEvent(input$sel_geo, {
     
     selected_geo <- input$sel_geo
     
-   # geo_option <- tibble("geo" = c("census_tract_id", "zcta", "neighborhood"),
-    #                   "cincy_name" = list(cincy::tract_tigris_2010, cincy::zcta_tigris_2010, cincy::neigh_cchmc_2010))
-    geo_option <- paste0("cincy::",selected_geo,"_tigris_2010")
+    if (input$sel_geo == 'neighborhood') {
+      geo_option <- neigh_cchmc_2010
+    } else {
+      geo_option <- eval(sym(paste0(selected_geo,"_tigris_2010")))
+    }
     
     d_to_int <- d_all 
-    
-    # if (grepl('^3', d_to_int[1,1])){ 
-    #   colnames(d_to_int)[1] <- c("census_tract_id")
-    # } else if (grepl('^4', d_to_int[1,1])) {
-    #   colnames(d_to_int)[1] <- c("zcta")
-    # } else if (!grepl('^3', d_to_int[1,1]) & !grepl('^4', d_to_int[1,1])){
-    #   colnames(d_to_int)[1] <- c("neighborhood")
-    # }
-    
-   # colnames(d_to_int)[1] <- 
+
     d_to_int <- d_to_int |> 
       rename_with(
         ~case_when(
@@ -165,14 +142,9 @@ server <- function(input, output, session) {
           str_starts(d_to_int$geo_index[1], '4') ~ c("zcta"),
           !str_starts(d_to_int$geo_index[1],  '3') & !str_starts(d_to_int$geo_index[1], '3') ~ c("neighborhood")),
         .cols = 'geo_index')
-    #grepl('^4', d_to_int[1,1]) ~ c("zcta"),
-    #!grepl('^3', d_to_int[1,1]) & !grepl('^4', d_to_int[1,1]) ~ c("neighborhood"))
-    
+
     d_all <- cincy::interpolate(from = d_to_int, 
-                       to = geo_option, # |> 
-                       #   filter(geo == selected_geo) |> 
-                       #   pull(cincy_name) |> 
-                       #   pluck(1), 
+                       to = geo_option, 
                        weights = "pop")
     
     colnames(d_all)[1] <- c("geo_index")
@@ -181,8 +153,6 @@ server <- function(input, output, session) {
     
     d_all
   })
-  
- # })
   
   
   observeEvent(input$univariate_switch, {
@@ -206,16 +176,6 @@ server <- function(input, output, session) {
     
     d_names |> 
       filter(core %in% d_sel_cores()$name)
-    #| title == sticky_x | title == sticky_y)
-    
-    # if (is.null(sticky_x()) | is.null(sticky_y())) {
-    # d_names |>
-    #   filter(core %in% d_sel_cores()$name)
-    # }
-    # else if (!is.null(sticky_x()) | !is.null(sticky_y())) {
-    #   d_names |>
-    #     filter(title == sticky_x() | title == sticky_y())
-    # }
   })
   
   
@@ -300,15 +260,15 @@ server <- function(input, output, session) {
                                                                        "1-2","2-2","3-2",
                                                                        "1-3","2-3","3-3")))
       
-      out <- sf::st_transform(out, crs = "NAD83")
+      out <- sf::st_transform(out, crs = sf::st_crs(d_all))
       
       map <- 
-        leaflet(out) |> 
-        setView(-84.55, 39.18, zoom = 11.5) |> 
+        leaflet(out) |>
+        setView(-84.55, 39.18, zoom = 11.5) |>
         addProviderTiles(provider = providers$CartoDB.Positron) |>
-        addPolygons(fillColor = ~pal(bi_class), fillOpacity = 0.7, stroke = T, 
-                    label = ~lapply(out$out_lab, HTML), 
-                    weight = .5, color = "#333333") |> 
+        addPolygons(fillColor = ~pal(bi_class), fillOpacity = 0.7, stroke = T,
+                    label = ~lapply(out$out_lab, HTML),
+                    weight = .5, color = "#333333") |>
         removeLayersControl()
       
       map  
@@ -331,7 +291,7 @@ server <- function(input, output, session) {
       pal <- colorFactor(uni_colors, factor(out$x_class, levels = c("1", "2", "3",
                                                                      "4", "5", "6")))
       
-      out <- sf::st_transform(out, crs = "NAD83")
+      out <- sf::st_transform(out, crs = sf::st_crs(d_all))
       
       map <- 
         leaflet(out) |> 
@@ -448,7 +408,6 @@ server <- function(input, output, session) {
       
       scat1 <- insert_xaxis_grob(scat, hist1, position = "bottom")
       scat2 <- insert_yaxis_grob(scat1, hist2, position = "right")
-      #scat_full <- ggdraw(scat2)
       
       finalScat <- ggdraw() +
         draw_plot(scat2) + #, 0, 0, 1, 1, vjust = -.2) 
@@ -517,8 +476,6 @@ server <- function(input, output, session) {
             axis.title = element_text(size = if (input$big_plot == FALSE) {6} else {10}),
             legend.key.size = unit(3,"mm")) +
       labs(x = paste0(input$x), y = "") 
-      #xlim(min(d()$xvar()), max(d()$xvar())) +
-      #ylim(0, 50) 
     
     gir_join <- girafe(ggobj = scat, 
                        width_svg = if (input$big_plot == FALSE) {3} else {6}, 
@@ -571,8 +528,8 @@ server <- function(input, output, session) {
                                                                        "1-2","2-2","3-2",
                                                                        "1-3","2-3","3-3")))
       
-      out <- sf::st_transform(out, crs = "NAD83")
-      d_scat_click <- sf::st_transform(d_scat_click, crs = 'NAD83')
+      out <- sf::st_transform(out, crs = sf::st_crs(d_all))
+      d_scat_click <- sf::st_transform(d_scat_click, crs = sf::st_crs(d_all))
       
       map <- 
         leafletProxy("map", data = out) |> 
@@ -613,8 +570,8 @@ server <- function(input, output, session) {
       pal <- colorFactor(uni_colors, factor(out$x_class, levels = c("1", "2", "3",
                                                                         "4", "5", "6")))
       
-      out <- sf::st_transform(out, crs = "NAD83")
-      d_scat_click <- sf::st_transform(d_scat_click, crs = 'NAD83')
+      out <- sf::st_transform(out, crs = sf::st_crs(d()))
+      d_scat_click <- sf::st_transform(d_scat_click, crs = sf::st_crs(d()))
       
       map <- 
         leafletProxy("map", data = out) |> 
@@ -641,11 +598,11 @@ server <- function(input, output, session) {
 
     
     click <- tibble(lng = map_click$lng, lat = map_click$lat) |> 
-      sf::st_as_sf(coords= c('lng', 'lat'), crs = sf::st_crs(d()))
+      sf::st_as_sf(coords= c('lng', 'lat'), crs = sf::st_crs(d_all))
     
     #print(sf::st_crs(click))
     #print(sf::st_crs(d()))
-    sf::st_transform()
+    #sf::st_transform()
     
     d_selected <- d() |> 
       sf::st_join(click, left = FALSE)
@@ -758,7 +715,6 @@ server <- function(input, output, session) {
         
         scat1 <- insert_xaxis_grob(scat, hist1, position = "bottom")
         scat2 <- insert_yaxis_grob(scat1, hist2, position = "right")
-        #scat_full <- ggdraw(scat2)
         
         finalScat <- ggdraw() +
           draw_plot(scat2) + #, 0, 0, 1, 1, vjust = -.2)
@@ -815,18 +771,6 @@ server <- function(input, output, session) {
                    ymin = -Inf, ymax = Inf,
                    alpha = 1,
                    fill = "#F6EDDE") 
-          # annotate("rect", 
-          #          xmin = bins_x[7], xmax = bins_x[8],   
-          #          ymin = -Inf, ymax = Inf,
-          #          alpha = 1,
-          #          fill = codec_colors()[7]) + 
-          # annotate("rect", 
-          #          xmin = bins_x[8], xmax = Inf,  
-          #          ymin = -Inf, ymax = Inf,
-          #          alpha = 1,
-          #          fill = codec_colors()[8]) 
-        
-       # print(d_selected)
         
         scat <- scatter_panels +
           geom_histogram_interactive(d(), mapping = aes_string(x = xvar(), tooltip = "geo_index",
@@ -841,10 +785,6 @@ server <- function(input, output, session) {
                                   xend = xvar(),
                                   y = -1,
                                   yend = 0),
-                                  #xmin = xvar() - .05, 
-                                  #xmax = xvar() + .05,
-                                  #ymin = 0,
-                                  #ymax = Inf),
                        arrow = arrow(length = unit(1, "mm"), type = "closed"),
                        color = "black") +
           theme_light() +
@@ -852,8 +792,7 @@ server <- function(input, output, session) {
                 axis.title = element_text(size = if (input$big_plot == FALSE) {6} else {10}),
                 legend.key.size = unit(3,"mm")) +
           labs(x = paste0(input$x), y = "") 
-        #xlim(min(d()$xvar()), max(d()$xvar())) +
-        #ylim(0, 50) 
+       
         
         gir_join <- girafe(ggobj = scat, 
                            width_svg = if (input$big_plot == FALSE) {3} else {6}, 
@@ -927,9 +866,6 @@ server <- function(input, output, session) {
   
     
     updateCheckboxGroupInput(inputId = 'core', selected = "")
-    
-    #updatePickerInput(session = session, inputId = 'x', selected = sticky_x, choices = d_sel_metrics2$title)
-    #updatePickerInput(session = session, inputId = 'y', selected = sticky_y, choices = d_sel_metrics2$title)
     
   })
   
