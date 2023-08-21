@@ -3,27 +3,22 @@ library(dplyr)
 
 
 d_drive <- codec_data("hamilton_drivetime", geography = cincy::tract_tigris_2010, geometry = FALSE) |> 
-  select(-year) |> 
-  rename('geo_index' = census_tract_id_2010)
+  select(-year) 
 
 d_land <- codec_data("hamilton_landcover", geography = cincy::tract_tigris_2010, geometry = FALSE) |> 
-  select(-year) |> 
-  rename('geo_index' = census_tract_id_2010)
+  select(-year) 
 
 d_traffic <- codec_data("hamilton_traffic", geography = cincy::tract_tigris_2010, geometry = FALSE) |> 
-  select(-year) |> 
-  rename('geo_index' = census_tract_id_2010)
+  select(-year)
 
 d_acs <- codec_data("hh_acs_measures", cincy::tract_tigris_2010, geometry = FALSE) |> 
   filter(year == max(year)) |> 
-  select(-contains("moe"), -year) |> 
-  rename('geo_index' = census_tract_id_2010)
+  select(-contains("moe"), -year) 
   
 d_indices <- codec_data("tract_indices", geography = cincy::tract_tigris_2010, geometry = TRUE) |> 
   sf::st_as_sf() |>
   sf::st_transform(crs = 5072) |> 
-  select(-year) |> 
-  rename('geo_index' = census_tract_id_2010)
+  select(-year) 
 # 
 # d_property <- codec_data("hamilton_property_code_enforcement", geography = geo_input, geometry = FALSE) |> 
 #   select(-year) %>%
@@ -31,11 +26,12 @@ d_indices <- codec_data("tract_indices", geography = cincy::tract_tigris_2010, g
 #property code only available in 2020, not sure how to reconcile together
 
 
-d_all <- left_join(d_drive, d_land, by = "geo_index") |> 
-  left_join(d_traffic, by = "geo_index") |> 
-  left_join(d_acs, by = "geo_index") |> 
-  left_join(d_indices, by = "geo_index") #|> 
- # left_join(d_property, by = "geo_index") 
+d_all <- left_join(d_drive, d_land, by = "census_tract_id_2010") |> 
+  left_join(d_traffic, by = "census_tract_id_2010") |> 
+  left_join(d_acs, by = "census_tract_id_2010") |> 
+  left_join(d_indices, by = "census_tract_id_2010") |> 
+  rename('geo_index' = census_tract_id_2010)
+ # left_join(d_property, by = "geo_index") |> 
 
 d_all_log <- d_all |> 
   select(where(is.logical)) |> 
@@ -61,7 +57,7 @@ var_meta$description <- var_meta$description |>
 get_names <- function(d, core_name) {
   d <- d |> 
     sf::st_drop_geometry() |>
-    pivot_longer(cols = -geo_index, names_to = "name", values_to = "value") |> 
+    pivot_longer(cols = -census_tract_id_2010, names_to = "name", values_to = "value") |> 
     mutate(core = core_name) |> 
     select(name, core) |> 
     left_join(var_meta, by = "name")
