@@ -1,44 +1,29 @@
 library(codec)
 library(dplyr)
 
-# if (exists(input$sel_geo) == F) {
-#    selected_geo <- 'tract'
-# } else {
-#   selected_geo <- input$sel_geo
-# }
-
-#geo_option <- tibble("geo" = c("tract", "zcta", "neighborhood"),
- #                    "cincy_name" = list(cincy::tract_tigris_2010, cincy::zcta_tigris_2010, cincy::neigh_cchmc_2010))
-
-#collect_data <- function(selected_geo) {
-# 
-# geo_input <- geo_option |> 
-#   filter(geo == selected_geo) |> 
-#   pull(cincy_name) |> 
-#   pluck(1)
 
 d_drive <- codec_data("hamilton_drivetime", geography = cincy::tract_tigris_2010, geometry = FALSE) |> 
-  select(-year) %>%
-  rename('geo_index' = colnames(.)[1])
+  select(-year) |> 
+  rename('geo_index' = census_tract_id_2010)
 
 d_land <- codec_data("hamilton_landcover", geography = cincy::tract_tigris_2010, geometry = FALSE) |> 
-  select(-year) %>%
-  rename('geo_index' = colnames(.)[1])
+  select(-year) |> 
+  rename('geo_index' = census_tract_id_2010)
 
 d_traffic <- codec_data("hamilton_traffic", geography = cincy::tract_tigris_2010, geometry = FALSE) |> 
-  select(-year) %>%
-  rename('geo_index' = colnames(.)[1])
+  select(-year) |> 
+  rename('geo_index' = census_tract_id_2010)
 
 d_acs <- codec_data("hh_acs_measures", cincy::tract_tigris_2010, geometry = FALSE) |> 
   filter(year == max(year)) |> 
-  select(-contains("moe"), -year) %>%
-  rename('geo_index' = colnames(.)[1])
+  select(-contains("moe"), -year) |> 
+  rename('geo_index' = census_tract_id_2010)
   
 d_indices <- codec_data("tract_indices", geography = cincy::tract_tigris_2010, geometry = TRUE) |> 
   sf::st_as_sf() |>
   sf::st_transform(crs = 5072) |> 
-  select(-year) %>%
-  rename('geo_index' = colnames(.)[1])
+  select(-year) |> 
+  rename('geo_index' = census_tract_id_2010)
 # 
 # d_property <- codec_data("hamilton_property_code_enforcement", geography = geo_input, geometry = FALSE) |> 
 #   select(-year) %>%
@@ -63,12 +48,6 @@ d_all <- d_all |>
 d_all <- d_all |> 
    sf::st_as_sf()
 
-
-
- # left_join(tigris::tracts(state = 'OH', county = "Hamilton", year = 2010), 
-            #         by = c('census_tract_id_2010' = 'GEOID10')) |> 
-    # left_join(cincy::tract_tigris_2010, by = 'census_tract_id_2010') |> 
-
 var_meta <- glimpse_schema(d_all) |> 
   relocate(title, .before = name) |> 
   rowwise() |> 
@@ -79,46 +58,34 @@ var_meta$description <- var_meta$description |>
   replace_na("No description available")
 
 
+get_names <- function(d, core_name) {
+  d <- d |> 
+    sf::st_drop_geometry() |>
+    pivot_longer(cols = -geo_index, names_to = "name", values_to = "value") |> 
+    mutate(core = core_name) |> 
+    select(name, core) |> 
+    left_join(var_meta, by = "name")
+  
+  d
+}
 
-
-d_indices_names <- d_indices |> 
-  sf::st_drop_geometry() |>
-  pivot_longer(cols = -geo_index, names_to = "name", values_to = "value") |> 
-  mutate(core = "tract_indices") |> 
-  select(name, core) |> 
-  left_join(var_meta, by = "name")
+d_indices_names <- d_indices |>
+  get_names('tract_indices')
 
 d_drive_names <- d_drive |> 
-  pivot_longer(cols = -geo_index, names_to = "name", values_to = "value") |> 
-  mutate(core = "hamilton_drivetime") |> 
-  select(name, core) |> 
-  left_join(var_meta, by = "name")
+  get_names('hamilton_drivetime')
 
 d_land_names <- d_land |> 
-  pivot_longer(cols = geo_index, names_to = "name", values_to = "value") |> 
-  mutate(core = "hamilton_landcover") |> 
-  select(name, core) |> 
-  left_join(var_meta, by = "name")
+  get_names('hamilton_landcover')
 
 d_traffic_names <- d_traffic |> 
-  sf::st_drop_geometry() |>
-  pivot_longer(cols = -geo_index, names_to = "name", values_to = "value") |> 
-  mutate(core = "hamilton_traffic") |> 
-  select(name, core) |> 
-  left_join(var_meta, by = "name")
+  get_names('hamilton_traffic')
 
 d_acs_names <- d_acs |> 
-  sf::st_drop_geometry() |>
-  pivot_longer(cols = -geo_index, names_to = "name", values_to = "value") |> 
-  mutate(core = "hh_acs_measures") |> 
-  select(name, core) |> 
-  left_join(var_meta, by = "name")
+  get_names('hh_acts_measures')
 
 # d_property_names <- d_property |> 
-#   pivot_longer(cols = -census_tract_id_2020, names_to = "name", values_to = "value") |> 
-#   mutate(core = "hamilton_property_code_enforcement") |> 
-#   select(name, core) |> 
-#   left_join(var_meta, by = "name")
+#   get_names('hamilton_property_code_enforcement')
 
 d_names <- rbind(d_drive_names, d_land_names, d_traffic_names, d_acs_names, d_indices_names) |> #, d_property_names
   distinct()
@@ -157,14 +124,5 @@ d_names <-  d_names |>
   rename(title = "title.x", core_title = "title.y") |> 
   filter(!duplicated(title)) |> 
   rbind(d_names_dupes)
-
-
-
-#out <- list(d_all, var_meta, core_names, d_names)
-
-#return(out)
-
-#}
-
 
   
