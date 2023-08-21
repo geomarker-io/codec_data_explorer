@@ -9,12 +9,8 @@ library(cowplot)
 library(ggExtra)
 library(shinyWidgets)
 library(leaflet)
-library(tmap)
 
 {
-  tmap_mode("view")
-  
-  
   
   source('dataset_prep.R')
   
@@ -84,7 +80,7 @@ ex_card <- card(
                width = "125px", height = "auto", style = "display: block; margin-left: auto; margin-right: auto;")),
       hr(),
       radioButtons(inputId = "sel_geo",
-                   label = strong("Select your geographic unit:"),
+                   label = strong("Select your", a("geographic unit:", href = "https://geomarker.io/cincy/articles/geographies.html", target = "_blank")),
                    choiceNames = c("Census Tract", "ZCTA (Zip Code Area)", "Neighborhood"),
                    choiceValues = c("census_tract_id", 'zcta', 'neighborhood'),
                    selected = "census_tract_id"),
@@ -290,8 +286,8 @@ server <- function(input, output, session) {
         mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
       
       out <- out |> 
-        mutate(out_lab = paste(xvar(), ": ", get(xvar()), "<br>",
-                               yvar(), ": ", get(yvar())))
+        mutate(out_lab = paste(xvar(), ": ", round(get(xvar()),2), "<br>",
+                               yvar(), ": ", round(get(yvar()),2)))
       
       pal <- colorFactor(codec_bi_pal, factor(out$bi_class, levels = c("1-1","2-1","3-1",
                                                                        "1-2","2-2","3-2",
@@ -323,7 +319,7 @@ server <- function(input, output, session) {
         mutate(x_class = paste0(as.numeric(bi_x)))
       
       out <- out |> 
-        mutate(out_lab = paste(xvar(), ": ", get(xvar())))
+        mutate(out_lab = paste(xvar(), ": ", round(get(xvar()),2)))
       
       pal <- colorFactor(uni_colors, factor(out$x_class, levels = c("1", "2", "3",
                                                                      "4", "5", "6")))
@@ -536,10 +532,12 @@ server <- function(input, output, session) {
       
     if (input$univariate_switch == F) {
       
+      
       scat_click <- c(input$scatter_selected)
       
       d_scat_click <- d() |> 
-        filter(census_tract_id_2010 == scat_click) 
+        filter(geo_index == scat_click) 
+      
       
       bins_x <- pull(d(), xvar())
       bins_y <- pull(d(), yvar())
@@ -559,15 +557,15 @@ server <- function(input, output, session) {
         mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
       
       out <- out |> 
-        mutate(out_lab = paste(xvar(), ": ", get(xvar()), "<br>",
-                               yvar(), ": ", get(yvar())))
+        mutate(out_lab = paste(xvar(), ": ", round(get(xvar()),2), "<br>",
+                               yvar(), ": ", round(get(yvar()),2)))
       
       pal <- colorFactor(codec_bi_pal, factor(out$bi_class, levels = c("1-1","2-1","3-1",
                                                                        "1-2","2-2","3-2",
                                                                        "1-3","2-3","3-3")))
       
       out <- sf::st_transform(out, crs = "NAD83")
-      d_scat_click <- sf::st_transform(d_scat_click, crs = 'NAD_83')
+      d_scat_click <- sf::st_transform(d_scat_click, crs = 'NAD83')
       
       map <- 
         leafletProxy("map", data = out) |> 
@@ -586,7 +584,7 @@ server <- function(input, output, session) {
       scat_click <- c(input$scatter_selected)
       
       d_scat_click <- d() |> 
-        filter(census_tract_id_2010 == scat_click) 
+        filter(geo_index == scat_click) 
       
       
       bins_x <- pull(d(), xvar())
@@ -601,7 +599,7 @@ server <- function(input, output, session) {
         mutate(x_class = paste0(as.numeric(bi_x)))
       
       out <- out |> 
-        mutate(out_lab = paste(xvar(), ": ", get(xvar())))
+        mutate(out_lab = paste(xvar(), ": ", round(get(xvar()),2)))
       
       
       
@@ -609,7 +607,7 @@ server <- function(input, output, session) {
                                                                         "4", "5", "6")))
       
       out <- sf::st_transform(out, crs = "NAD83")
-      d_scat_click <- sf::st_transform(d_scat_click, crs = 'NAD_83')
+      d_scat_click <- sf::st_transform(d_scat_click, crs = 'NAD83')
       
       map <- 
         leafletProxy("map", data = out) |> 
@@ -633,13 +631,19 @@ server <- function(input, output, session) {
     
     map_click <- reactiveVal()
     map_click <- input$map_shape_click
+
     
     click <- tibble(lng = map_click$lng, lat = map_click$lat) |> 
-      sf::st_as_sf(coords= c('lng', 'lat'), crs = sf::st_crs(d_all))
+      sf::st_as_sf(coords= c('lng', 'lat'), crs = sf::st_crs(d()))
+    
+    #print(sf::st_crs(click))
+    #print(sf::st_crs(d()))
+    sf::st_transform()
     
     d_selected <- d() |> 
       sf::st_join(click, left = FALSE)
     
+    print(d_selected)
     
     output$scatter <- renderGirafe({
       req(input$x)
