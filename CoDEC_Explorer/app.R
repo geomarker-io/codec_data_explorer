@@ -121,27 +121,43 @@ ui <- page_fillable(
 
 server <- function(input, output, session) {
   
-  d <- d_all
+  #old_geo <- reactiveValues(prev_sel_geo = NULL)
   
   d <- eventReactive(input$sel_geo, {
     
-    selected_geo <- input$sel_geo
+    #old_geo$prev_sel_geo <- tail(c(old_geo$prev_sel_geo, input$sel_geo), 1) 
+    
+    #print(old_geo$prev_sel_geo)
+    
+    new_geo <- input$sel_geo
     
     if (input$sel_geo == 'neighborhood') {
       geo_option <- neigh_cchmc_2010
     } else {
-      geo_option <- eval(sym(paste0(selected_geo,"_tigris_2010")))
+      geo_option <- eval(sym(paste0(new_geo,"_tigris_2010")))
     }
     
+   # print(geo_option[1,])
+    
     d_to_int <- d_all 
+    
+    # d_to_int <- d_to_int |> 
+    #   rename_with(
+    #         ~case_when(
+    #           old_geo$prev_sel_geo == 'tract' ~  c("census_tract_id"),
+    #           old_geo$prev_sel_geo == 'zcta' ~ c("zcta"),
+    #           old_geo$prev_sel_geo == 'neighborhood' ~ c("neighborhood")),
+    #         .cols = 'geo_index')
 
-    d_to_int <- d_to_int |> 
+    d_to_int <- d_to_int |>
       rename_with(
         ~case_when(
           str_starts(d_to_int$geo_index[1], '3') ~  c("census_tract_id"),
           str_starts(d_to_int$geo_index[1], '4') ~ c("zcta"),
           !str_starts(d_to_int$geo_index[1],  '3') & !str_starts(d_to_int$geo_index[1], '3') ~ c("neighborhood")),
         .cols = 'geo_index')
+    
+  #  print(d_to_int[1,])
 
     d_all <- cincy::interpolate(from = d_to_int, 
                        to = geo_option, 
@@ -150,6 +166,10 @@ server <- function(input, output, session) {
     colnames(d_all)[1] <- c("geo_index")
     
     d_all <- sf::st_transform(d_all, crs = 4326)
+    
+    #old_geo <- input$sel_geo
+    
+   # print(d_all[1,1:3])
     
     d_all
   })
@@ -253,7 +273,8 @@ server <- function(input, output, session) {
         mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
       
       out <- out |> 
-        mutate(out_lab = paste(xvar(), ": ", round(get(xvar()),2), "<br>",
+        mutate(out_lab = paste(geo_index, "<br>",
+                               xvar(), ": ", round(get(xvar()),2), "<br>",
                                yvar(), ": ", round(get(yvar()),2)))
       
       pal <- colorFactor(codec_bi_pal, factor(out$bi_class, levels = c("1-1","2-1","3-1",
@@ -286,7 +307,8 @@ server <- function(input, output, session) {
         mutate(x_class = paste0(as.numeric(bi_x)))
       
       out <- out |> 
-        mutate(out_lab = paste(xvar(), ": ", round(get(xvar()),2)))
+        mutate(out_lab = paste(geo_index, "<br>",
+                               xvar(), ": ", round(get(xvar()),2)))
       
       pal <- colorFactor(uni_colors, factor(out$x_class, levels = c("1", "2", "3",
                                                                      "4", "5", "6")))
@@ -521,7 +543,8 @@ server <- function(input, output, session) {
         mutate(bi_class = paste0(as.numeric(bi_x), "-", as.numeric(bi_y)))
       
       out <- out |> 
-        mutate(out_lab = paste(xvar(), ": ", round(get(xvar()),2), "<br>",
+        mutate(out_lab = paste(geo_index, "<br>",
+                               xvar(), ": ", round(get(xvar()),2), "<br>",
                                yvar(), ": ", round(get(yvar()),2)))
       
       pal <- colorFactor(codec_bi_pal, factor(out$bi_class, levels = c("1-1","2-1","3-1",
@@ -563,7 +586,8 @@ server <- function(input, output, session) {
         mutate(x_class = paste0(as.numeric(bi_x)))
       
       out <- out |> 
-        mutate(out_lab = paste(xvar(), ": ", round(get(xvar()),2)))
+        mutate(out_lab = paste(geo_index, "<br>",
+                               xvar(), ": ", round(get(xvar()),2)))
       
       
       
