@@ -64,38 +64,39 @@ ex_card <- card(
               ),
   layout_sidebar(
     fillable = TRUE,
-    sidebar(
-      div(img(src = "logo.svg", 
-               width = "125px", height = "auto", style = "display: block; margin-left: auto; margin-right: auto;")),
-      hr(),
-      radioButtons(inputId = "sel_geo",
-                   label = strong("Select your", a("geographic unit:", href = "https://geomarker.io/cincy/articles/geographies.html", target = "_blank")),
-                   choiceNames = c("Census Tract", "Zip Code Tabulation Area", "Neighborhood"),
-                   choiceValues = c("tract", 'zcta', 'neighborhood'),
-                   selected = "tract"),
-      
-      checkboxGroupInput(inputId = "core",
-                         label = strong("Select the CoDEC cores you would like to include:"),
-                         choices = core_names$title,
-                         selected = "Census Tract-Level Neighborhood Indices"),
-      layout_column_wrap(
-        width = 1/2,
-        actionButton('select_all', label = "Select All", style = "fill", color = "primary"),
-        actionButton('deselect_all', label = "Deselect All", style = "fill", color = "primary"),
+    sidebar = 
+      sidebar(
+        div(img(src = "logo.svg", 
+                width = "125px", height = "auto", style = "display: block; margin-left: auto; margin-right: auto;")),
+        hr(),
+        radioButtons(inputId = "sel_geo",
+                     label = strong("Select your", a("geographic unit:", href = "https://geomarker.io/cincy/articles/geographies.html", target = "_blank")),
+                     choiceNames = c("Census Tract", "Zip Code Tabulation Area", "Neighborhood"),
+                     choiceValues = c("tract", 'zcta', 'neighborhood'),
+                     selected = "tract"),
+        
+        checkboxGroupInput(inputId = "core",
+                           label = strong("Select the CoDEC cores you would like to include:"),
+                           choices = core_names$title,
+                           selected = "Census Tract-Level Neighborhood Indices"),
+        layout_column_wrap(
+          width = 1/2,
+          actionButton('select_all', label = "Select All", style = "fill", color = "primary"),
+          actionButton('deselect_all', label = "Deselect All", style = "fill", color = "primary"),
+        ),
+        hr(),
+        uiOutput("x_sel"),
+        uiOutput("y_sel"),
+        shinyWidgets::prettySwitch("univariate_switch",
+                                   label = "Univariate view",
+                                   status = "primary") |> 
+          tagAppendAttributes(style = "float: right"),
+        hr(),
+        htmlOutput('x_desc'),
+        hr(),
+        htmlOutput('y_desc'),
+        width = '18%'
       ),
-      hr(),
-      uiOutput("x_sel"),
-      uiOutput("y_sel"),
-      shinyWidgets::prettySwitch("univariate_switch",
-                                 label = "Univariate view",
-                                 status = "primary") |> 
-        tagAppendAttributes(style = "float: right"),
-      hr(),
-      htmlOutput('x_desc'),
-      hr(),
-      htmlOutput('y_desc'),
-      width = '18%'
-    ),
   leafletOutput("map"),
   uiOutput("plot_panel")
   )
