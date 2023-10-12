@@ -15,23 +15,23 @@ d_acs <- codec_data("hh_acs_measures", cincy::tract_tigris_2010, geometry = FALS
   filter(year == max(year)) |> 
   select(-contains("moe"), -year) 
   
+d_property <- codec_data("hamilton_property_code_enforcement", geography = cincy::tract_tigris_2010, geometry = FALSE) |>
+  select(-year)
+
 d_indices <- codec_data("tract_indices", geography = cincy::tract_tigris_2010, geometry = TRUE) |> 
   sf::st_as_sf() |>
   sf::st_transform(crs = 5072) |> 
   select(-year) 
-# 
-# d_property <- codec_data("hamilton_property_code_enforcement", geography = geo_input, geometry = FALSE) |> 
-#   select(-year) %>%
-#   rename('geo_index' = colnames(.)[1])
+
 #property code only available in 2020, not sure how to reconcile together
 
 
 d_all <- left_join(d_drive, d_land, by = "census_tract_id_2010") |> 
   left_join(d_traffic, by = "census_tract_id_2010") |> 
   left_join(d_acs, by = "census_tract_id_2010") |> 
+  left_join(d_property, by = "census_tract_id_2010") |> 
   left_join(d_indices, by = "census_tract_id_2010") |> 
   rename('geo_index' = census_tract_id_2010)
- # left_join(d_property, by = "geo_index") |> 
 
 d_all_log <- d_all |> 
   select(where(is.logical)) |> 
@@ -79,12 +79,12 @@ d_traffic_names <- d_traffic |>
   get_names('hamilton_traffic')
 
 d_acs_names <- d_acs |> 
-  get_names('hh_acts_measures')
+  get_names('hh_acs_measures')
 
-# d_property_names <- d_property |> 
-#   get_names('hamilton_property_code_enforcement')
+ d_property_names <- d_property |> 
+   get_names('hamilton_property_code_enforcement')
 
-d_names <- rbind(d_drive_names, d_land_names, d_traffic_names, d_acs_names, d_indices_names) |> #, d_property_names
+d_names <- rbind(d_drive_names, d_land_names, d_traffic_names, d_acs_names, d_indices_names, d_property_names ) |>
   distinct()
 
 d_names <- d_names |> 
@@ -102,8 +102,8 @@ core_meta <- rbind(
   glimpse_tdr(d_land)$attributes,
   glimpse_tdr(d_traffic)$attributes,
   glimpse_tdr(d_acs)$attributes,
-  glimpse_tdr(d_indices)$attributes#,
-  #glimpse_tdr(d_property)$attributes
+  glimpse_tdr(d_indices)$attributes,
+  glimpse_tdr(d_property)$attributes
 ) 
 
 core_names <- tibble("title" = filter(core_meta, name == 'title')$value, "name" = filter(core_meta, name == 'name')$value) 
